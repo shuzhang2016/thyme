@@ -7,6 +7,7 @@
 #include "thyme/runtime/realtime_guard.h"
 
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 
 namespace thyme {
@@ -222,7 +223,8 @@ bool EventThread::Start() {
   stop_.store(false, std::memory_order_relaxed);
   int rc = pthread_create(&thread_, nullptr, &EventThread::Trampoline, this);
   if (rc != 0) {
-    THYME_LOG_ERROR("event_thread: %s pthread_create failed", name_);
+    THYME_LOG_ERROR("event_thread: %s pthread_create failed: %s", name_,
+                    std::strerror(rc));
     return false;
   }
   const PlacementResult pr = ApplyThreadPlacement(thread_, placement_);

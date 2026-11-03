@@ -1,5 +1,6 @@
 #include "thyme/record/record_mirror_client.h"
 
+#include <cerrno>
 #include <cstdio>
 #include <new>
 #include <cstring>
@@ -26,7 +27,11 @@ bool Client::Create(const char* shm_name, const ThymeRecordTable& table,
   ThymeStructDesc descs[kRecordMirrorMaxSlots];
   table.fill_struct_descs(descs, kRecordMirrorMaxSlots);
 
-  if (!region_.Create(shm_name_, sizeof(RecordMirrorPage))) return false;
+  if (!region_.Create(shm_name_, sizeof(RecordMirrorPage))) {
+    std::fprintf(stderr, "RecordMirrorPage: Create(%s, %zu) failed: %s\n",
+                 shm_name_, sizeof(RecordMirrorPage), std::strerror(errno));
+    return false;
+  }
   page_ = new (region_.data()) RecordMirrorPage;
   if (!page_->Init(session_id, descs, static_cast<uint32_t>(table.count))) {
     page_ = nullptr;

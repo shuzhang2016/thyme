@@ -160,7 +160,11 @@ bool CyclicThread::Start() {
     TryPublishSchedEpochNs(want);
   }
   int rc = pthread_create(&thread_, nullptr, &CyclicThread::Trampoline, this);
-  if (rc != 0) return false;
+  if (rc != 0) {
+    THYME_LOG_ERROR("cyclic_thread: %s pthread_create failed: %s", name_,
+                    std::strerror(rc));
+    return false;
+  }
 
   switch (ApplyThreadPlacement(thread_, placement_)) {
     case PlacementResult::kAffinity:

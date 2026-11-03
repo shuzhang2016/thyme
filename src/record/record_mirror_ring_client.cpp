@@ -1,5 +1,6 @@
 #include "thyme/record/record_mirror_ring_client.h"
 
+#include <cerrno>
 #include <cstdint>
 #include <cstdio>
 #include <new>
@@ -28,7 +29,13 @@ bool RingClient::Create(const char* shm_name, const ThymeStructDesc* descs,
   std::snprintf(shm_name_, sizeof(shm_name_), "%s", shm_name);
   // OPS-02: ShmRegion::Create proves staleness before reclaiming. Never unlink
   // a live ring from a second producer; that would detach its readers.
-  if (!region_.Create(shm_name_, bytes)) return false;
+  if (!region_.Create(shm_name_, bytes)) {
+    std::fprintf(stderr,
+                 "RecordMirrorRingPage: Create(%s, %llu) failed: %s\n",
+                 shm_name_, static_cast<unsigned long long>(bytes),
+                 std::strerror(errno));
+    return false;
+  }
   page_ = new (region_.data()) RecordMirrorRingPage;
   if (!page_->Init(session_id, descs, specs, count)) {
     page_ = nullptr;

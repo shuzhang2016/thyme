@@ -110,10 +110,17 @@ bool WaitChildrenLooping(MpSupervisorSession& session,
   return ok;
 }
 
+std::string TestToken() {
+  static const std::string token = [] {
+    return std::to_string(getpid()) + "_" +
+           std::to_string(
+               std::chrono::steady_clock::now().time_since_epoch().count());
+  }();
+  return token;
+}
+
 std::string MirrorName() {
-  char buf[128];
-  std::snprintf(buf, sizeof(buf), "/thyme_test_mp_%d", static_cast<int>(getpid()));
-  return buf;
+  return "/thyme_test_mp_" + TestToken();
 }
 
 bool ShmNameExists(const char* name) {
@@ -452,9 +459,9 @@ void TestChildFailure() {
 // ARCH-11: role attach validates the full super-header on both pages. A
 // tampered health or control page must fail Open() before any counter is read.
 void TestRoleOpenRejectsTamperedPages() {
-  char prefix[64];
-  std::snprintf(prefix, sizeof(prefix), "/thyme_test_mprole_%d",
-                static_cast<int>(getpid()));
+  char prefix[96];
+  std::snprintf(prefix, sizeof(prefix), "/thyme_test_mprole_%s",
+                TestToken().c_str());
   char health_name[80];
   char ctrl_name[80];
   std::snprintf(health_name, sizeof(health_name), "%s_h", prefix);
