@@ -55,6 +55,28 @@ jobs:
         run: cmake --build build -j"$(nproc)"
       - name: CTest
         run: ctest --test-dir build --output-on-failure
+      - name: Summarize CTest failures
+        if: failure()
+        run: |
+          {
+            echo "## CTest failures"
+            echo
+            if [ -f build/Testing/Temporary/LastTestsFailed.log ]; then
+              echo '```'
+              cat build/Testing/Temporary/LastTestsFailed.log
+              echo '```'
+            else
+              echo "No LastTestsFailed.log was produced."
+            fi
+            if [ -f build/Testing/Temporary/LastTest.log ]; then
+              echo
+              echo "### Failure excerpts"
+              echo '```'
+              grep -n -A25 -E 'Test Failed|FAILED|Failed' \
+                build/Testing/Temporary/LastTest.log | tail -400
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   check-clang-tidy:
     name: clang-tidy
