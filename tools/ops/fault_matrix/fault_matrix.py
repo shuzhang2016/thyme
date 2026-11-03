@@ -13,7 +13,7 @@ Cases:
                     keep committing with no reader (no backpressure), and a
                     fresh reader must attach.            [real kill -9]
   kill_supervisor   real SIGKILL of the parent process; its role child is
-                    armed with PR_SET_PDEATHSIG and must disappear. [real]
+                    armed with PR_SET_PDEATHSIG and must stop running. [real]
   shm_full          SHM create failure: the segment ftruncate is bounded with
                     RLIMIT_FSIZE (a full tmpfs, scaled down). Create must fail,
                     leave no object behind, and succeed once the limit is
@@ -311,6 +311,19 @@ def case_kill_reader(m: Matrix) -> tuple[bool, dict]:
     return ok, observables
 
 
+def _proc_state(pid: int) -> str | None:
+    """Return the process state letter, or None when /proc/<pid> is gone."""
+    try:
+        data = pathlib.Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        # The second field is the parenthesized comm; the state follows it.
+        return data[data.rindex(")") + 2]
+    except (ValueError, IndexError):
+        return None
+
+
 def case_kill_supervisor(m: Matrix) -> tuple[bool, dict]:
     parent = m.spawn("pdeathsig-parent")
     ready = parent.wait_json(lambda j: "child" in j, timeout=5.0)
@@ -318,17 +331,29 @@ def case_kill_supervisor(m: Matrix) -> tuple[bool, dict]:
         parent.kill()
         return False, {"error": "pdeathsig parent did not report a child"}
     child_pid = int(ready["child"])
+    armed = parent.wait_json(
+        lambda j: j.get("armed") is True and int(j.get("pid", -1)) == child_pid,
+        timeout=5.0)
+    if armed is None:
+        parent.kill()
+        return False, {"error": "pdeathsig child did not arm in time",
+                       "child_pid": child_pid}
     rc = parent.kill()
     deadline = time.monotonic() + 3.0
     gone_at = None
+    last_state = _proc_state(child_pid)
     while time.monotonic() < deadline:
-        if not pathlib.Path(f"/proc/{child_pid}").exists():
+        last_state = _proc_state(child_pid)
+        # A killed child may briefly remain as a zombie until init reaps it;
+        # it is no longer running or supervised, which is the observable here.
+        if last_state is None or last_state == "Z":
             gone_at = round(3.0 - (deadline - time.monotonic()), 3)
             break
         time.sleep(0.01)
     observables = {
         "parent_exit_signal": -rc,
         "child_pid": child_pid,
+        "child_state": last_state,
         "child_gone": gone_at is not None,
         "child_gone_after_s": gone_at,
     }
