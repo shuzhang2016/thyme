@@ -146,7 +146,7 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "broadcast app configure failed")
 endif()
 # Build only `app` so Darwin is not blocked by scaffold eval_chains (timerfd).
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 4
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 2
   RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "broadcast app build failed")

@@ -58,6 +58,8 @@ jobs:
         run: cmake --build build -j"$(nproc)"
       - name: CTest
         run: |
+          ulimit -u 65535 2>/dev/null || true
+          ulimit -l unlimited 2>/dev/null || true
           set -o pipefail
           ctest --test-dir build --output-on-failure 2>&1 | tee /tmp/ctest.out
       - name: Annotate CTest failures
@@ -101,6 +103,15 @@ jobs:
             echo
             grep -n -A60 -E 'Test Failed|\*\*\*Failed' \
               /tmp/ctest.out 2>/dev/null | tail -2000 || true
+            echo
+            echo '### Resource state at failure'
+            echo '```'
+            ulimit -a
+            echo "pids.max: $(cat /sys/fs/cgroup/pids.max 2>/dev/null || echo n/a)"
+            echo "pids.current: $(cat /sys/fs/cgroup/pids.current 2>/dev/null || echo n/a)"
+            free -m
+            df -h
+            echo '```'
           } > /tmp/ci-diagnostic.md
           gh issue create --title "CI diagnostic ${GITHUB_SHA::7}" \
             --body-file /tmp/ci-diagnostic.md
