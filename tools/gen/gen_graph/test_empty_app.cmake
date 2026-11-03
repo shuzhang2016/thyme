@@ -29,7 +29,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "cmake configure failed")
 endif()
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 2
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 1
   RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "build failed")

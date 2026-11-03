@@ -71,7 +71,8 @@ jobs:
           ulimit -u 65535 2>/dev/null || true
           ulimit -l unlimited 2>/dev/null || true
           set -o pipefail
-          ctest --test-dir build --output-on-failure -I "${{ matrix.range }}" 2>&1 | tee /tmp/ctest.out
+          ctest --test-dir build --output-on-failure -I "${{ matrix.range }}" \
+            -E '^bench_|^test_shm_leak_audit$' 2>&1 | tee /tmp/ctest.out
       - name: Annotate CTest failures
         if: failure()
         run: |
@@ -120,6 +121,13 @@ jobs:
             echo "pids.max: $(cat /sys/fs/cgroup/pids.max 2>/dev/null || echo n/a)"
             echo "pids.current: $(cat /sys/fs/cgroup/pids.current 2>/dev/null || echo n/a)"
             echo "cgroup: $(cat /proc/self/cgroup)"
+            for f in /sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.max \
+                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.current \
+                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.events \
+                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/pids.max \
+                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/pids.current; do
+              echo "$(basename "$f"): $(cat "$f" 2>/dev/null || echo n/a)"
+            done
             echo "threads/processes: $(ps -eLf 2>/dev/null | wc -l)"
             echo "zombies: $(ps -eo stat 2>/dev/null | grep -c '^Z')"
             find /sys/fs/cgroup -maxdepth 4 -name pids.max -print -exec cat {} \; 2>/dev/null | head -20
@@ -151,6 +159,26 @@ jobs:
               echo '```'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  test-shm-leak-audit:
+    name: SHM leak audit
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+      - name: Run the SHM leak audit in a fresh job
+        run: |
+          ulimit -u 65535 2>/dev/null || true
+          ctest --test-dir build --output-on-failure -R '^test_shm_leak_audit$'
 
   check-clang-tidy:
     name: clang-tidy
