@@ -55,6 +55,15 @@ jobs:
         run: cmake --build build -j"$(nproc)"
       - name: CTest
         run: ctest --test-dir build --output-on-failure
+      - name: Annotate CTest failures
+        if: failure()
+        run: |
+          if [ -f build/Testing/Temporary/LastTestsFailed.log ]; then
+            failed="$(tr '\n' ';' < build/Testing/Temporary/LastTestsFailed.log)"
+            echo "::error title=CTest failures::${failed}"
+          else
+            echo "::error title=CTest failures::LastTestsFailed.log was not produced"
+          fi
       - name: Summarize CTest failures
         if: failure()
         run: |
