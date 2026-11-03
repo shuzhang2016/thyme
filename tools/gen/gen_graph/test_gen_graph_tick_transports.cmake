@@ -96,7 +96,7 @@ void BrThread::OnBcast(const decltype(bcast_)::Sample& sample) {
 ]==])
 
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "tick transports configure failed")
 endif()

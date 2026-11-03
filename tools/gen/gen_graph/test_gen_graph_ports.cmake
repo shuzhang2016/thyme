@@ -75,7 +75,7 @@ file(APPEND "${ROOT}/CMakeLists.txt"
   "target_link_libraries(replay_behavior PRIVATE ports_app_lib)\n")
 
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${ROOT}/build"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "ports app configure failed")
 endif()
@@ -127,7 +127,7 @@ file(WRITE "${MANY_ROOT}/src/nodes/health_reporter.cpp"
   "#include \"nodes/health_reporter.h\"\n"
   "void HealthReporterThread::OnLoop() { my_health_->AddDrops(1); }\n")
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${MANY_ROOT}" -B "${MANY_ROOT}/build"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "produce: many app configure failed")
 endif()
@@ -148,7 +148,7 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "gen_graph (bad fixture) failed: ${rc}")
 endif()
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT_BAD}" -B "${ROOT_BAD}/build"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "bad ports app configure failed")
 endif()

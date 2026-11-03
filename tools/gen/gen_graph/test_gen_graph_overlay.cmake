@@ -40,7 +40,7 @@ endif()
 
 # The merged project (base ∪ overlay) must configure, build and run.
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${ROOT}/build"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "overlay app configure failed")
 endif()

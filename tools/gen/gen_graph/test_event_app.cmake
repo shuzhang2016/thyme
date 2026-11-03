@@ -404,7 +404,7 @@ int main() {
 ]==])
 
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "cmake configure failed")
 endif()
@@ -472,7 +472,7 @@ void SinkThread::OnReadings(const decltype(readings_)::Sample& v) {
 }
 ]==])
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT_MIX}" -B "${BUILD_MIX}"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "mixed record cmake configure failed")
 endif()

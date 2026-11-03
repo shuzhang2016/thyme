@@ -25,7 +25,7 @@ expect_contains("${ROOT}/generated/graph_check.h" "ring_cap must be a power of t
 expect_contains("${ROOT}/generated/graph_check.h" "pool_n must be > 0")
 expect_contains("${ROOT}/generated/graph_check.h" "kAbiMaxThreads")
 execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
-  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+  -DTHYME_SOURCE_DIR=${THYME_ABS} -DTHYME_BUILD_TESTS=OFF RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "cmake configure failed")
 endif()
