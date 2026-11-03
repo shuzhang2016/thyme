@@ -64,6 +64,24 @@ jobs:
           else
             echo "::error title=CTest failures::LastTestsFailed.log was not produced"
           fi
+      - name: Annotate CTest failure excerpts
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          path = pathlib.Path("build/Testing/Temporary/LastTest.log")
+          if not path.is_file():
+              print("::error title=CTest excerpt::LastTest.log was not produced")
+              raise SystemExit(0)
+          lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+          out = []
+          for index, line in enumerate(lines):
+              if "Test Failed" in line or "***Failed" in line:
+                  out.extend(lines[max(0, index - 3):index + 40])
+          excerpt = "\n".join(out)[-12000:]
+          excerpt = excerpt.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::error title=CTest excerpt::{excerpt}")
+          PY
       - name: Summarize CTest failures
         if: failure()
         run: |
