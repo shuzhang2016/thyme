@@ -39,12 +39,22 @@ jobs:
         run: ctest --test-dir build -L mr_gate --output-on-failure
 
   test-linux:
-    name: Full Linux test suite
+    name: Full Linux test suite (shard ${{ matrix.shard }})
     if: github.event_name == 'push'
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 1
+            range: "1,90"
+          - shard: 2
+            range: "91,180"
+          - shard: 3
+            range: "181,270"
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
@@ -61,7 +71,7 @@ jobs:
           ulimit -u 65535 2>/dev/null || true
           ulimit -l unlimited 2>/dev/null || true
           set -o pipefail
-          ctest --test-dir build --output-on-failure 2>&1 | tee /tmp/ctest.out
+          ctest --test-dir build --output-on-failure -I "${{ matrix.range }}" 2>&1 | tee /tmp/ctest.out
       - name: Annotate CTest failures
         if: failure()
         run: |
@@ -117,7 +127,7 @@ jobs:
             df -h
             echo '```'
           } > /tmp/ci-diagnostic.md
-          gh issue create --title "CI diagnostic ${GITHUB_SHA::7}" \
+          gh issue create --title "CI diagnostic ${{ matrix.shard }} ${GITHUB_SHA::7}" \
             --body-file /tmp/ci-diagnostic.md
       - name: Summarize CTest failures
         if: failure()
