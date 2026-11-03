@@ -57,7 +57,9 @@ jobs:
       - name: Build
         run: cmake --build build -j"$(nproc)"
       - name: CTest
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          set -o pipefail
+          ctest --test-dir build --output-on-failure 2>&1 | tee /tmp/ctest.out
       - name: Annotate CTest failures
         if: failure()
         run: |
@@ -72,15 +74,15 @@ jobs:
         run: |
           python3 - <<'PY'
           import pathlib
-          path = pathlib.Path("build/Testing/Temporary/LastTest.log")
+          path = pathlib.Path("/tmp/ctest.out")
           if not path.is_file():
-              print("::error title=CTest excerpt::LastTest.log was not produced")
+              print("::error title=CTest excerpt::ctest output was not captured")
               raise SystemExit(0)
           lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
           out = []
           for index, line in enumerate(lines):
               if "Test Failed" in line or "***Failed" in line:
-                  out.extend(lines[max(0, index - 3):index + 40])
+                  out.extend(lines[max(0, index - 3):index + 45])
           excerpt = "\n".join(out)[-12000:]
           excerpt = excerpt.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
           print(f"::error title=CTest excerpt::{excerpt}")
@@ -97,8 +99,8 @@ jobs:
             cat build/Testing/Temporary/LastTestsFailed.log 2>/dev/null || true
             echo '```'
             echo
-            grep -n -A50 -E 'Test Failed|\*\*\*Failed' \
-              build/Testing/Temporary/LastTest.log 2>/dev/null | tail -1000 || true
+            grep -n -A60 -E 'Test Failed|\*\*\*Failed' \
+              /tmp/ctest.out 2>/dev/null | tail -2000 || true
           } > /tmp/ci-diagnostic.md
           gh issue create --title "CI diagnostic ${GITHUB_SHA::7}" \
             --body-file /tmp/ci-diagnostic.md
