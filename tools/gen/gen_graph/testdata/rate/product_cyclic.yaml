@@ -1,0 +1,72 @@
+version: 1
+pool_n: 16
+ring_cap: 8
+
+nodes:
+  - id: perception
+    type: perception
+    hz: 10
+    process: perception
+  - id: fusion
+    type: fusion
+    hz: 21
+    process: rest
+  - id: decision
+    type: decision
+    hz: 20
+    process: rest
+    wait_inputs: period
+  - id: planning
+    type: planning
+    hz: 20
+    process: rest
+    wait_inputs: period
+  - id: arcomm
+    type: arcomm
+    hz: 50
+    process: rest
+  - id: health_reporter
+    type: health_reporter
+    hz: 10
+    process: rest
+
+edges:
+  - from: perception
+    to: fusion
+    channel: obstacle
+    cpp_type: J3Obstacle
+    pool: ObstaclePool
+    transport: spsc
+    shm: _ob
+    delivery: latest
+  - from: fusion
+    to: decision
+    channel: object_list
+    cpp_type: ObjectList
+    pool: ObjectListPool
+    transport: spsc
+    delivery: latest
+  - from: decision
+    to: planning
+    channel: interest_target
+    cpp_type: InterestTarget
+    pool: InterestTargetPool
+    transport: spsc
+    delivery: latest
+  - from: planning
+    to: arcomm
+    channel: can_out_long
+    cpp_type: CanOutLongCtrl
+    pool: CanOutLongPool
+    transport: spsc
+    delivery: latest
+
+processes:
+  - id: perception
+    role: perception
+  - id: rest
+    role: rest
+
+supervisor:
+  shm_prefix: /c9_%pid
+  health_n: 10

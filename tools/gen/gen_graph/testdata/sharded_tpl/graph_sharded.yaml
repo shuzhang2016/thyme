@@ -1,0 +1,50 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 50
+    process: main
+    cpu_set: [0]
+    wcet_ns: 1000000
+  - id: sink
+    type: sink
+    hz: 50
+    process: main
+    exec: event
+    threads: 2
+    cpu_set: [0]
+    priority: 40
+    placement_fail: best_effort
+    wcet_ns: 1000000
+    deadline_ns: 1000000
+    input_budget: 2
+    overrun: degrade
+edges:
+  - from: prod
+    to: sink
+    channel: c0
+    cpp_type: Reading
+    transport: spsc
+  - from: prod
+    to: sink
+    channel: c1
+    cpp_type: Reading
+    transport: spsc
+  - from: prod
+    to: sink
+    channel: c2
+    cpp_type: Reading
+    transport: spsc
+  - from: prod
+    to: sink
+    channel: c3
+    cpp_type: Reading
+    transport: spsc
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

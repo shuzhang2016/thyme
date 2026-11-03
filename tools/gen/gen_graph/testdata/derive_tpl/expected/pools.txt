@@ -1,0 +1,4 @@
+# pool|prefix|index_pipe(0/1) — derived from graph edges, first-seen order
+FooPool|foo|0
+BarPool|bar|0
+BazPool|baz|1

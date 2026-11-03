@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "standards": [
+    {
+      "name": "MISRA C++:2008",
+      "status": "not_assessed",
+      "reason": "No compliance checker covers the full rule set, and no rule-by-rule deviation and approval record exists; the local coding rules and the clang-tidy subset cannot replace a formal assessment."
+    },
+    {
+      "name": "AUTOSAR C++14",
+      "status": "not_assessed",
+      "reason": "No clause-by-clause conformance matrix, tool qualification, or external audit has been performed; support for AUTOSAR type aliases does not mean compliance with the AUTOSAR C++14 coding guidelines."
+    }
+  ],
+  "rules": [
+    {
+      "id": "CR-01",
+      "claim": "Core libraries disable exceptions and RTTI; the established hot paths after Prepare()/Start() do not allocate, and out-of-memory behavior is explicit.",
+      "evidence": [
+        {
+          "type": "cmake_flag",
+          "flag": "-fno-exceptions"
+        },
+        {
+          "type": "cmake_flag",
+          "flag": "-fno-rtti"
+        },
+        {
+          "type": "ci",
+          "job": "test-werror",
+          "required_text": "THYME_WERROR=ON"
+        },
+        {
+          "type": "clang_tidy",
+          "check": "cppcoreguidelines-no-malloc"
+        },
+        {
+          "type": "ctest",
+          "name": "test_core_no_alloc"
+        },
+        {
+          "type": "ctest",
+          "name": "test_coding_rule_language_subset"
+        },
+        {
+          "type": "document",
+          "path": "docs/design/adr/0002-core-language-and-allocation.md"
+        }
+      ],
+      "limit": "Configuration-time assertions check COMPILE_OPTIONS on the four core targets; consumers and external dependencies are outside this proof. Allocation sentinels cover only executed hot paths, and the explicit out-of-memory policy still requires code review."
+    },
+    {
+      "id": "CR-02",
+      "claim": "Publication uses the in-place BeginWrite/CommitWrite/AbortWrite slot protocol and preserves each container's abort semantics.",
+      "evidence": [
+        {
+          "type": "ctest",
+          "name": "test_write_section"
+        },
+        {
+          "type": "ctest",
+          "name": "test_copy_in_equivalence"
+        },
+        {
+          "type": "document",
+          "path": "docs/reference/review-checklist.md"
+        }
+      ],
+      "limit": "Tests cover the registered protocol and equivalence cases; whether new call sites follow single-producer and pairing discipline still requires review."
+    },
+    {
+      "id": "CR-03",
+      "claim": "Hot paths use counters and rate-limited logging rather than unconditional per-message formatting; the logging hot path does not allocate.",
+      "evidence": [
+        {
+          "type": "ctest",
+          "name": "test_log"
+        },
+        {
+          "type": "ctest",
+          "name": "test_core_no_alloc"
+        },
+        {
+          "type": "document",
+          "path": "docs/reference/error-handling-audit.md"
+        }
+      ],
+      "limit": "Tests prove rate limiting and zero allocation on the selected logging paths; no static checker proves that every new call site avoids per-message logging."
+    }
+  ]
+}

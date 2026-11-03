@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "kind": "thyme-recorder-status",
+  "ok": true,
+  "socket": "/tmp/thyme_recorder.sock",
+  "armed": true,
+  "phase": "armed",
+  "next_trigger_id": 12,
+  "auth_rejects": 0,
+  "captures_done": 3,
+  "slices_done": 2,
+  "pending_bytes": 4096,
+  "disk_full": false,
+  "integrity_mode": "metadata",
+  "stats": {
+    "captures_done": 3,
+    "triggers_rejected": 4,
+    "descriptors_queued": 100,
+    "pending_evicted": 5,
+    "overrun_before_queue": 6,
+    "samples_written": 90,
+    "frames_written": 10,
+    "holes_written": 7,
+    "torn_reads": 8,
+    "harvest_retries": 9,
+    "session_reattaches": 1,
+    "source_errors": 2,
+    "disk_errors": 11,
+    "sync_errors": 12
+  },
+  "trigger": {
+    "audit_drops": 13,
+    "fsm_event_drops": 14
+  },
+  "logging": {
+    "service_sink_open": true,
+    "service_records_written": 21,
+    "service_records_suppressed": 22,
+    "service_records_dropped": 23,
+    "service_records_truncated": 24,
+    "service_rotations": 25
+  }
+}

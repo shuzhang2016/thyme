@@ -1,0 +1,15 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: tick
+    type: tick
+    hz: 10
+    process: main
+edges: []
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 1

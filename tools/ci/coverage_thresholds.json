@@ -1,0 +1,25 @@
+{
+  "comment": "CI-04 per-library line-coverage thresholds. Baseline measured 2026-10-23 with GCC 11.4 (--coverage, CMAKE_BUILD_TYPE=Debug) over the full ctest suite (118/118 passing, 170 .gcda files). Threshold = floor(measured) - 1, i.e. at least one point of headroom below the recorded baseline; do not lower a value without reviewing the coverage report, and raise it deliberately after new tests land. CI measures with Clang/llvm-cov; the one-point margin absorbs toolchain differences in line accounting.",
+  "libraries": {
+    "thyme_app": {
+      "measured": 76.17,
+      "min_line": 75
+    },
+    "thyme_probe_core": {
+      "measured": 72.82,
+      "min_line": 71
+    },
+    "thyme_recorder": {
+      "measured": 81.63,
+      "min_line": 80
+    },
+    "thyme_replay": {
+      "measured": 77.03,
+      "min_line": 76
+    },
+    "thyme_runtime": {
+      "measured": 81.79,
+      "min_line": 80
+    }
+  }
+}

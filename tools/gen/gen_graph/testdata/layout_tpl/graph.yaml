@@ -1,0 +1,66 @@
+# GEN-08 layout/size assert fixture: one latest SHM slot (kGraphShmSlotSizes),
+# one queue ring into an event node (ShmSpscRing page), one broadcast ring
+# (ShmSpmcRing page), and a depth override (power-of-two assert). Emit-only;
+# the generated headers are compiled standalone by
+# test_gen_graph_layout_asserts.cmake.
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 20
+    process: p1
+  - id: cons
+    type: consumer
+    hz: 20
+    process: p2
+  - id: sink
+    type: sink
+    hz: 20
+    process: p3
+    exec: event
+  - id: br
+    type: br
+    hz: 20
+    process: p4
+    exec: event
+edges:
+  - from: prod
+    to: cons
+    channel: latest_out
+    cpp_type: Reading
+    pool: ReadingPool
+    transport: shm
+    shm: _latest
+    delivery: latest
+    mp_gate: true
+  - from: prod
+    to: sink
+    channel: queue_out
+    cpp_type: Reading
+    transport: shm
+    shm: _queue
+    delivery: queue
+    depth: 16
+  - from: prod
+    to: br
+    channel: bcast
+    cpp_type: Reading
+    transport: shm
+    shm: _bcast
+    delivery: broadcast
+    depth: 32
+    read: follow
+processes:
+  - id: p1
+    role: p1
+  - id: p2
+    role: p2
+  - id: p3
+    role: p3
+  - id: p4
+    role: p4
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 4

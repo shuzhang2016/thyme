@@ -1,0 +1,262 @@
+# HELP thyme_app_uptime_seconds StatusSnapshot::uptime_ns rendered as seconds.
+# TYPE thyme_app_uptime_seconds gauge
+thyme_app_uptime_seconds 184
+# HELP thyme_audit_up 1 when the SEC-02 audit log was read.
+# TYPE thyme_audit_up gauge
+thyme_audit_up 1
+# HELP thyme_edge_drops_total HealthSlot::drop_cnt for one consumer graph edge.
+# TYPE thyme_edge_drops_total counter
+thyme_edge_drops_total{edge="camera",role="perception",role_id="perception_0"} 5
+thyme_edge_drops_total{edge="lidar",role="perception",role_id="perception_0"} 2
+thyme_edge_drops_total{edge="record_frames",role="recorder",role_id="recorder_0"} 0
+thyme_edge_drops_total{edge="record_small",role="recorder",role_id="recorder_0"} 0
+# HELP thyme_health_slot_error_code HealthSlot::error_code value for one graph node.
+# TYPE thyme_health_slot_error_code gauge
+thyme_health_slot_error_code{node="camera",role="perception",role_id="perception_0"} 0
+thyme_health_slot_error_code{node="lidar",role="perception",role_id="perception_0"} 0
+thyme_health_slot_error_code{node="record_frames",role="recorder",role_id="recorder_0"} 41
+thyme_health_slot_error_code{node="record_small",role="recorder",role_id="recorder_0"} 37
+# HELP thyme_hist_up 1 when the thyme_log_merge --hist JSONL was read.
+# TYPE thyme_hist_up gauge
+thyme_hist_up 1
+# HELP thyme_log_budget_drops_total Records dropped because the process log budget was reached (audit records are never dropped).
+# TYPE thyme_log_budget_drops_total counter
+thyme_log_budget_drops_total 3
+# HELP thyme_log_budget_limit_bytes OPS-05 per-process log budget in bytes (0 = per-file caps only).
+# TYPE thyme_log_budget_limit_bytes gauge
+thyme_log_budget_limit_bytes 268435456
+# HELP thyme_log_budget_used_bytes Bytes accounted by this process's rotating log writers (live + retained generations).
+# TYPE thyme_log_budget_used_bytes gauge
+thyme_log_budget_used_bytes 12582912
+# HELP thyme_log_rotations_total Rotations across this process's rotating log writers (audit, .fsm, perf dumps).
+# TYPE thyme_log_rotations_total counter
+thyme_log_rotations_total 17
+# HELP thyme_perf_latency_max_ns OBS-09 exact observed maximum latency in ns.
+# TYPE thyme_perf_latency_max_ns gauge
+thyme_perf_latency_max_ns{node="3",series="0",series_kind="latency"} 91234
+thyme_perf_latency_max_ns{node="3",series="2",series_kind="callback_work"} 30111
+# HELP thyme_perf_latency_quantile_ns OBS-09 bucket-resolution latency percentile in ns (+6.25%/-5.56% bucket error; see histogram.h).
+# TYPE thyme_perf_latency_quantile_ns gauge
+thyme_perf_latency_quantile_ns{node="3",quantile="0.5",series="0",series_kind="latency"} 8200
+thyme_perf_latency_quantile_ns{node="3",quantile="0.5",series="2",series_kind="callback_work"} 3000
+thyme_perf_latency_quantile_ns{node="3",quantile="0.9",series="0",series_kind="latency"} 16400
+thyme_perf_latency_quantile_ns{node="3",quantile="0.9",series="2",series_kind="callback_work"} 6100
+thyme_perf_latency_quantile_ns{node="3",quantile="0.99",series="0",series_kind="latency"} 32700
+thyme_perf_latency_quantile_ns{node="3",quantile="0.99",series="2",series_kind="callback_work"} 12200
+thyme_perf_latency_quantile_ns{node="3",quantile="0.999",series="0",series_kind="latency"} 65500
+thyme_perf_latency_quantile_ns{node="3",quantile="0.999",series="2",series_kind="callback_work"} 24400
+# HELP thyme_perf_node_deadline_ns Declared dispatch deadline from perf type-9 metadata (0 = no event-node deadline).
+# TYPE thyme_perf_node_deadline_ns gauge
+thyme_perf_node_deadline_ns{node="3"} 8000000
+# HELP thyme_perf_node_period_ns Declared graph-node period from perf type-9 metadata.
+# TYPE thyme_perf_node_period_ns gauge
+thyme_perf_node_period_ns{node="3"} 10000000
+# HELP thyme_perf_samples Samples in the merged OBS-09 histogram (per node/series; snapshot of the analysed perf dumps, not a monotonic counter).
+# TYPE thyme_perf_samples gauge
+thyme_perf_samples{node="3",series="0",series_kind="latency"} 18400
+thyme_perf_samples{node="3",series="2",series_kind="callback_work"} 9200
+# HELP thyme_probe_up 1 when the thyme_probe JSON was read and parsed.
+# TYPE thyme_probe_up gauge
+thyme_probe_up 1
+# HELP thyme_recorder_captures_done_total TriggeredRecorder::Stats::captures_done.
+# TYPE thyme_recorder_captures_done_total counter
+thyme_recorder_captures_done_total 3
+# HELP thyme_recorder_descriptors_queued_total TriggeredRecorder::Stats::descriptors_queued.
+# TYPE thyme_recorder_descriptors_queued_total counter
+thyme_recorder_descriptors_queued_total 100
+# HELP thyme_recorder_disk_errors_total TriggeredRecorder::Stats::disk_errors.
+# TYPE thyme_recorder_disk_errors_total counter
+thyme_recorder_disk_errors_total 11
+# HELP thyme_recorder_disk_full TriggeredRecorder ENOSPC latch.
+# TYPE thyme_recorder_disk_full gauge
+thyme_recorder_disk_full 0
+# HELP thyme_recorder_frames_written_total TriggeredRecorder::Stats::frames_written.
+# TYPE thyme_recorder_frames_written_total counter
+thyme_recorder_frames_written_total 10
+# HELP thyme_recorder_harvest_retries_total TriggeredRecorder::Stats::harvest_retries.
+# TYPE thyme_recorder_harvest_retries_total counter
+thyme_recorder_harvest_retries_total 9
+# HELP thyme_recorder_holes_written_total TriggeredRecorder::Stats::holes_written.
+# TYPE thyme_recorder_holes_written_total counter
+thyme_recorder_holes_written_total 7
+# HELP thyme_recorder_integrity_mode Evidence manifest integrity mode (constant 1, mode label).
+# TYPE thyme_recorder_integrity_mode gauge
+thyme_recorder_integrity_mode{mode="metadata"} 1
+# HELP thyme_recorder_overrun_before_queue_total TriggeredRecorder::Stats::overrun_before_queue.
+# TYPE thyme_recorder_overrun_before_queue_total counter
+thyme_recorder_overrun_before_queue_total 6
+# HELP thyme_recorder_pending_evicted_total TriggeredRecorder::Stats::pending_evicted.
+# TYPE thyme_recorder_pending_evicted_total counter
+thyme_recorder_pending_evicted_total 5
+# HELP thyme_recorder_present 1 when the /status snapshot carries a recorder block.
+# TYPE thyme_recorder_present gauge
+thyme_recorder_present 1
+# HELP thyme_recorder_samples_written_total TriggeredRecorder::Stats::samples_written.
+# TYPE thyme_recorder_samples_written_total counter
+thyme_recorder_samples_written_total 90
+# HELP thyme_recorder_session_reattaches_total TriggeredRecorder::Stats::session_reattaches.
+# TYPE thyme_recorder_session_reattaches_total counter
+thyme_recorder_session_reattaches_total 1
+# HELP thyme_recorder_source_errors_total TriggeredRecorder::Stats::source_errors.
+# TYPE thyme_recorder_source_errors_total counter
+thyme_recorder_source_errors_total 2
+# HELP thyme_recorder_status_up 1 when recorder status-json was read and parsed.
+# TYPE thyme_recorder_status_up gauge
+thyme_recorder_status_up 1
+# HELP thyme_recorder_sync_errors_total TriggeredRecorder::Stats::sync_errors.
+# TYPE thyme_recorder_sync_errors_total counter
+thyme_recorder_sync_errors_total 12
+# HELP thyme_recorder_torn_reads_total TriggeredRecorder::Stats::torn_reads.
+# TYPE thyme_recorder_torn_reads_total counter
+thyme_recorder_torn_reads_total 8
+# HELP thyme_recorder_triggers_rejected_total TriggeredRecorder::Stats::triggers_rejected.
+# TYPE thyme_recorder_triggers_rejected_total counter
+thyme_recorder_triggers_rejected_total 4
+# HELP thyme_role_alive_total HealthSlot::alive_counter summed over the role's nodes.
+# TYPE thyme_role_alive_total counter
+thyme_role_alive_total{role="perception",role_id="perception_0"} 18400
+thyme_role_alive_total{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_deadline_misses_total HealthSlot::deadline_miss_cnt summed over the role's nodes.
+# TYPE thyme_role_deadline_misses_total counter
+thyme_role_deadline_misses_total{role="perception",role_id="perception_0"} 3
+thyme_role_deadline_misses_total{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_drops_total HealthSlot::drop_cnt summed over the role's nodes.
+# TYPE thyme_role_drops_total counter
+thyme_role_drops_total{role="perception",role_id="perception_0"} 7
+thyme_role_drops_total{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_error_slots Health slots whose error_code is non-zero (instantaneous count of nodes in error, not a counter).
+# TYPE thyme_role_error_slots gauge
+thyme_role_error_slots{role="perception",role_id="perception_0"} 0
+thyme_role_error_slots{role="recorder",role_id="recorder_0"} 2
+# HELP thyme_role_last_exit_code Last exited child's exit code (-1: signaled/never reaped).
+# TYPE thyme_role_last_exit_code gauge
+thyme_role_last_exit_code{role="perception",role_id="perception_0"} 0
+thyme_role_last_exit_code{role="recorder",role_id="recorder_0"} 1
+# HELP thyme_role_last_term_signal Last terminating signal (0: normal exit/never reaped).
+# TYPE thyme_role_last_term_signal gauge
+thyme_role_last_term_signal{role="perception",role_id="perception_0"} 15
+thyme_role_last_term_signal{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_loops_total MpControl::proc_loops for this role's process.
+# TYPE thyme_role_loops_total counter
+thyme_role_loops_total{role="perception",role_id="perception_0"} 1840
+thyme_role_loops_total{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_restarts_attempted_total OPS-01 supervisor restart attempts for this role.
+# TYPE thyme_role_restarts_attempted_total counter
+thyme_role_restarts_attempted_total{role="perception",role_id="perception_0"} 1
+thyme_role_restarts_attempted_total{role="recorder",role_id="recorder_0"} 5
+# HELP thyme_role_restarts_succeeded_total OPS-01 supervisor restarts that brought the role back.
+# TYPE thyme_role_restarts_succeeded_total counter
+thyme_role_restarts_succeeded_total{role="perception",role_id="perception_0"} 1
+thyme_role_restarts_succeeded_total{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_sched_mismatches_total SCH-08: threads whose actual policy/priority/affinity differs from the requested one (latch at Start).
+# TYPE thyme_role_sched_mismatches_total counter
+thyme_role_sched_mismatches_total{role="perception",role_id="perception_0"} 1
+thyme_role_sched_mismatches_total{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_role_stall_age_seconds Age of the role's last progress stamp (OPS-01 stall watch).
+# TYPE thyme_role_stall_age_seconds gauge
+thyme_role_stall_age_seconds{role="perception",role_id="perception_0"} 0.012
+thyme_role_stall_age_seconds{role="recorder",role_id="recorder_0"} 95
+# HELP thyme_role_state MpRoleState: 0 not_started, 1 running, 2 terminating, 3 waiting_backoff, 4 gave_up, 5 stopped, 6 unknown.
+# TYPE thyme_role_state gauge
+thyme_role_state{role="perception",role_id="perception_0"} 1
+thyme_role_state{role="recorder",role_id="recorder_0"} 4
+# HELP thyme_role_up 1 when the role state is `running`.
+# TYPE thyme_role_up gauge
+thyme_role_up{role="perception",role_id="perception_0"} 1
+thyme_role_up{role="recorder",role_id="recorder_0"} 0
+# HELP thyme_roles StatusSnapshot::n_roles (roles in this snapshot).
+# TYPE thyme_roles gauge
+thyme_roles 2
+# HELP thyme_service_log_records_dropped_total Service logger service_records_dropped from the trigger-center snapshot.
+# TYPE thyme_service_log_records_dropped_total counter
+thyme_service_log_records_dropped_total 23
+# HELP thyme_service_log_records_suppressed_total Service logger service_records_suppressed from the trigger-center snapshot.
+# TYPE thyme_service_log_records_suppressed_total counter
+thyme_service_log_records_suppressed_total 22
+# HELP thyme_service_log_records_truncated_total Service logger service_records_truncated from the trigger-center snapshot.
+# TYPE thyme_service_log_records_truncated_total counter
+thyme_service_log_records_truncated_total 24
+# HELP thyme_service_log_records_written_total Service logger service_records_written from the trigger-center snapshot.
+# TYPE thyme_service_log_records_written_total counter
+thyme_service_log_records_written_total 21
+# HELP thyme_service_log_rotations_total Service logger service_rotations from the trigger-center snapshot.
+# TYPE thyme_service_log_rotations_total counter
+thyme_service_log_rotations_total 25
+# HELP thyme_service_log_sink_open 1 when the service logger writes to its configured file sink.
+# TYPE thyme_service_log_sink_open gauge
+thyme_service_log_sink_open 1
+# HELP thyme_shm_page_compatible 1 when the page ABI/geometry matched the probe (0 = incompatible, see runbook §2).
+# TYPE thyme_shm_page_compatible gauge
+thyme_shm_page_compatible{kind="pinned_slot",page="/h264_front"} 1
+thyme_shm_page_compatible{kind="record_mirror",page="/thyme_rec_4301"} 0
+thyme_shm_page_compatible{kind="spmc_ring",page="/thyme_control"} 1
+thyme_shm_page_compatible{kind="spsc_ring",page="/thyme_recr_can"} 1
+# HELP thyme_shm_page_drops_total Container drops (push_fail / dropped_oversize / mirror drop).
+# TYPE thyme_shm_page_drops_total counter
+thyme_shm_page_drops_total{kind="pinned_slot",page="/h264_front"} 2
+thyme_shm_page_drops_total{kind="spmc_ring",page="/thyme_control"} 3
+thyme_shm_page_drops_total{kind="spsc_ring",page="/thyme_recr_can"} 5
+# HELP thyme_shm_page_epoch Lease/ring epoch (BF-04 generation tag).
+# TYPE thyme_shm_page_epoch gauge
+thyme_shm_page_epoch{kind="pinned_slot",page="/h264_front"} 3
+thyme_shm_page_epoch{kind="spmc_ring",page="/thyme_control"} 9
+# HELP thyme_shm_page_head Publish counter (ring/PinnedSlot head, LatestSlot seq/2).
+# TYPE thyme_shm_page_head gauge
+thyme_shm_page_head{kind="pinned_slot",page="/h264_front"} 90210
+thyme_shm_page_head{kind="spmc_ring",page="/thyme_control"} 72
+thyme_shm_page_head{kind="spsc_ring",page="/thyme_recr_can"} 18400
+# HELP thyme_shm_page_lease_steal_total BF-04: expired lease reclaimed while its reader was gone.
+# TYPE thyme_shm_page_lease_steal_total counter
+thyme_shm_page_lease_steal_total{kind="pinned_slot",page="/h264_front"} 1
+# HELP thyme_shm_page_pinned_skip_total BF-03: writer skipped a pinned PinnedSlot slot.
+# TYPE thyme_shm_page_pinned_skip_total counter
+thyme_shm_page_pinned_skip_total{kind="pinned_slot",page="/h264_front"} 17
+# HELP thyme_shm_page_tail Shared consumer cursor (only ShmSpscRing publishes one).
+# TYPE thyme_shm_page_tail gauge
+thyme_shm_page_tail{kind="spsc_ring",page="/thyme_recr_can"} 18398
+# HELP thyme_shm_spmc_reader_drops_total ShmSpmcRing drops observed by one lifetime reader slot.
+# TYPE thyme_shm_spmc_reader_drops_total counter
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="0"} 1
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="1"} 2
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="2"} 0
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="3"} 0
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="4"} 0
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="5"} 0
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="6"} 0
+thyme_shm_spmc_reader_drops_total{kind="spmc_ring",page="/thyme_control",reader_slot="7"} 0
+# HELP thyme_status_healthy StatusSnapshot::healthy (`ok` in the /status JSON).
+# TYPE thyme_status_healthy gauge
+thyme_status_healthy 1
+# HELP thyme_status_up 1 when the OPS-10 status snapshot was read and parsed.
+# TYPE thyme_status_up gauge
+thyme_status_up 1
+# HELP thyme_trigger_audit_decisions Audit records by decision/code in the current file (snapshot; rotates).
+# TYPE thyme_trigger_audit_decisions gauge
+thyme_trigger_audit_decisions{code="accepted",decision="accepted"} 1
+thyme_trigger_audit_decisions{code="muted",decision="rejected"} 1
+thyme_trigger_audit_decisions{code="preempted_by_higher",decision="preempted"} 1
+# HELP thyme_trigger_audit_drops_total CenterStats::audit_drops from the trigger-center status snapshot.
+# TYPE thyme_trigger_audit_drops_total counter
+thyme_trigger_audit_drops_total 13
+# HELP thyme_trigger_audit_records Parseable SEC-02 audit records in the current file (rotates at audit_max_bytes, so not monotonic).
+# TYPE thyme_trigger_audit_records gauge
+thyme_trigger_audit_records 3
+# HELP thyme_trigger_audit_unparsed_lines Audit lines without a `req=` field: a partial/torn write (crash) or a format drift, not the audit_drops counter.
+# TYPE thyme_trigger_audit_unparsed_lines gauge
+thyme_trigger_audit_unparsed_lines 1
+# HELP thyme_trigger_fsm_event_drops_total CenterStats::fsm_event_drops from the trigger-center status snapshot.
+# TYPE thyme_trigger_fsm_event_drops_total counter
+thyme_trigger_fsm_event_drops_total 14
+# HELP thyme_trigger_relay_debounced_total MpControl trigger relay messages coalesced (storm signal).
+# TYPE thyme_trigger_relay_debounced_total counter
+thyme_trigger_relay_debounced_total 4
+# HELP thyme_trigger_relay_inflight Requests relayed but not yet acknowledged, (req - ack) mod 2^32.
+# TYPE thyme_trigger_relay_inflight gauge
+thyme_trigger_relay_inflight 2
+# HELP thyme_trigger_relay_sent_total MpControl trigger relay messages sent.
+# TYPE thyme_trigger_relay_sent_total counter
+thyme_trigger_relay_sent_total 120
+# HELP thyme_trigger_relay_seq MpControl relay sequence number (wrap at 2^32, OPS-10).
+# TYPE thyme_trigger_relay_seq gauge
+thyme_trigger_relay_seq{kind="ack"} 118
+thyme_trigger_relay_seq{kind="request"} 120

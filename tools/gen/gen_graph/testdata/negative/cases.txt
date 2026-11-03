@@ -1,0 +1,68 @@
+# GEN-07 negative goldens: one malformed graph per row.
+#
+# Format: <fixture name>|<expected exit>|<expected line>|<diagnostic substring>
+#   - fixture        testdata/negative/<name>.yaml
+#   - expected exit  2 for every rejected graph (0 would mean a regression)
+#   - expected line  the yaml line named by the file:line diagnostic; "-" when
+#                    the diagnostic is graph-level (no single offending line)
+#   - substring      must appear in stdout+stderr; expected line must appear as
+#                    "<absolute fixture path>:<line>:"
+# Every diagnostic also has to be deterministic (the harness runs each fixture
+# twice and compares stderr) and must leave no generated/ tree behind.
+bad_version|2|1|version must be 1
+zero_pool_n|2|2|bad pool_n (0)
+huge_number|2|2|bad pool_n (999999999999999999999999999999)
+bad_ring_cap|2|3|ring_cap must be a power of two (12)
+tabs|2|7|tabs are not allowed (column 1)
+bad_hz_text|2|7|bad hz for node prod (fast)
+hz_too_high|2|7|hz must be <= 10000 for node prod
+missing_node_id|2|5|invalid or missing node id
+empty_type|2|5|empty type for node prod
+unknown_node_key|2|9|unknown node key colour
+unknown_top_key|2|26|unknown top-level key colour
+nodes_empty|2|4|nodes empty
+malformed_list_item|2|5|list item is not `key: value`
+yaml_anchor|2|5|unsupported YAML anchor '&'
+yaml_alias|2|5|unsupported YAML alias '*'
+yaml_block_scalar|2|6|unsupported YAML block scalar
+yaml_flow_list|2|6|unsupported YAML flow list
+yaml_flow_map|2|13|unsupported YAML flow map
+bad_exec|2|9|illegal exec on_event
+event_wait_inputs|2|9|wait_inputs not allowed on exec=event node cons
+deadline_on_cyclic|2|5|deadline_ns only allowed on exec=event node prod
+bad_delivery|2|20|illegal delivery sometimes
+bad_feedback_bool|2|20|illegal feedback yes
+bad_record_bool|2|20|illegal record yes
+depth_not_pow2|2|20|depth must be a power of two (3)
+depth_on_latest|2|14|requires delivery notify, queue, or broadcast (got latest)
+read_on_latest|2|14|only allowed on delivery broadcast (got latest)
+cross_latest_no_shm|2|14|delivery latest requires shm
+notify_with_shm|2|15|must not use shm
+broadcast_same_process|2|14|same-process broadcast edge
+broadcast_no_shm|2|14|delivery broadcast requires shm
+broadcast_with_pool|2|14|must not use pool
+duplicate_shm_suffix|2|25|duplicate shm suffix _ob
+shm_layout_conflict|2|26|shm suffix _ob maps to both latest and queue layouts
+mp_gate_on_notify|2|15|requires delivery latest (got notify)
+delay_without_feedback|2|14|delay on edge prod->cons (payload) requires feedback: true
+feedback_no_delay|2|30|requires an explicit delay > 0 (ns)
+dup_node_id|2|9|duplicate node id 'prod'
+dup_process_id|2|23|duplicate process id 'p1'
+dangling_to|2|14|to 'ghost' is not a declared node
+bad_channel|2|14|channel name 'my-channel' is not a valid C identifier
+bad_cpp_type|2|14|cpp_type 'Foo<Bar>' is not a valid C++ type name
+bad_pool|2|14|pool name '1Pool' is not a valid C identifier
+unknown_pool|2|14|unknown pool MissingPool on edge prod->cons
+bad_shm_suffix|2|14|shm suffix '_bad/name' has illegal characters
+missing_channel|2|14|missing channel name
+channel_type_conflict|2|28|channel 'payload' carries both cpp_type 'Foo' and 'Bar'
+mixed_record_flags|2|28|channel 'tick' mixes record: true and record: false
+producer_channel_collision|2|24|share producer channel 'payload'
+consumer_channel_collision|2|24|share consumer channel 'payload'
+too_many_nodes|2|5|has 65 nodes, limit is 64 (kAbiMaxThreads)
+cycle|2|30|directed cycle rejected: node_a -> node_b -> node_c -> node_a
+lossless_on_latest|2|14|lossless edge prod->cons (payload) requires delivery notify, queue, or broadcast
+lossless_insufficient|2|-|capacity=4 < required_slots=6
+lossless_unknown_wcet|2|-|consumer wcet_ns unknown
+incomplete_pin_window|2|14|requires before_ms, after_ms and per_frame_write_ms together
+max_lag_without_lossless|2|15|max_lag_ms on edge prod->cons (payload) requires lossless: true

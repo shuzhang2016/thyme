@@ -1,0 +1,109 @@
+# thyme multi-process supervisor as a systemd service.
+#
+# Type=notify and WatchdogSec use the app's opt-in notify shim
+# (thyme/app/systemd_notify.h):
+#   ForkRoles()    -> READY=1     once every role has been forked
+#   PollRestarts() -> WATCHDOG=1  at most once per second
+# Both are no-ops unless THYME_SD_NOTIFY is truthy *and* NOTIFY_SOCKET is set.
+# An embedder that does not drive the OPS-01 poll loop must disable the
+# watchdog in a drop-in (WatchdogSec=0) or it will be restarted every 30s.
+#
+# Double-restart protection (see deploy/README.md): OPS-01 restarts roles
+# *inside* the live supervisor with its own budget and exponential backoff.
+# systemd must not compete with that, so the unit restarts only when the
+# supervisor process itself fails, and StartLimitBurst caps a crash loop.
+# A clean exit (planned stop, exit 0) is never restarted.
+#
+# Stale state on boot: ExecStartPre does NOT delete /dev/shm/thyme_* or the
+# status socket. SHM names are per-session (/c9_<pid>, /thyme_rec_<pid>,
+# channel names) and a blind unlink can pull a segment out from under a live
+# peer. OPS-02 proves staleness (fd/maps scan + F_SETLEASE) inside
+# ShmRegion::Create() and only then unlinks; the OPS-10 StatusServer replaces
+# an euid-owned stale socket itself. Do not add `rm -rf /dev/shm/...` here.
+
+[Unit]
+Description=thyme dataflow supervisor
+Documentation=file:/usr/share/doc/thyme/deploy/README.md
+After=local-fs.target
+# Crash-loop guard: 5 starts per 5 minutes, then the unit stays failed until
+# an operator intervenes. Combined with RestartSec=5s this is far slower than
+# the supervisor's own role backoff, so the two policies cannot resonate.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+NotifyAccess=main
+# EnvironmentFile= is applied after Environment=, so a site file can override
+# the watchdog gate (for example THYME_SD_NOTIFY=0).
+Environment=THYME_SD_NOTIFY=1
+EnvironmentFile=-/etc/thyme/thyme-app.env
+
+# The acquisition output directory lives under /opt/usr on the target image image,
+# outside systemd's StateDirectory. '+' runs these outside the sandbox, which
+# is required while ProtectSystem=strict has the rootfs read-only.
+ExecStartPre=+/bin/mkdir -p /opt/usr/thyme/triggered_data
+ExecStartPre=+/bin/chown thyme:thyme /opt/usr/thyme/triggered_data
+
+# The wrapper execs ${THYME_APP_BIN:-/opt/usr/thyme/bin/thyme-app}; exec keeps
+# the main PID, so NotifyAccess=main accepts READY=1 from the app itself.
+ExecStart=/usr/libexec/thyme/thyme-app-run
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=60s
+TimeoutStopSec=20s
+# mixed: SIGTERM goes to the supervisor only, so it can ask roles to stop and
+# unlink its SHM; systemd escalates to SIGKILL for the whole cgroup after
+# TimeoutStopSec if it does not finish.
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Dedicated unprivileged account. The installer creates it (and rewrites these
+# two lines when --user/--group are used). Add sensor/reader groups your graph
+# needs, e.g. SupplementaryGroups=video.
+User=thyme
+Group=thyme
+
+RuntimeDirectory=thyme
+RuntimeDirectoryMode=0750
+StateDirectory=thyme
+StateDirectoryMode=0750
+LogsDirectory=thyme
+LogsDirectoryMode=0750
+WorkingDirectory=/var/lib/thyme
+
+# A hung supervisor stops calling PollRestarts(), stops feeding this watchdog,
+# and is killed with SIGABRT; Restart=on-failure then starts a fresh session
+# (OPS-02 reclaims the stale SHM). Role-level stalls never reach systemd --
+# they are OPS-01's job.
+WatchdogSec=30s
+WatchdogSignal=SIGABRT
+
+# Hardening. MemoryDenyWriteExecute is safe for thyme: nothing JITs and no
+# mapping is ever made writable+executable (source grep: only file-backed
+# PROT_READ mappings and anonymous PROT_READ|PROT_WRITE).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+# /tmp and /var/tmp are private; /dev/shm is intentionally NOT (external
+# thyme_probe/readers must see the same segments, and OPS-02's lease proof
+# depends on the real /dev/shm namespace).
+PrivateTmp=yes
+ReadWritePaths=/dev/shm /opt/usr/thyme/triggered_data /var/lib/thyme
+# The status endpoint is the only socket family thyme needs. Extend this if an
+# embedder opens DDS/TCP sockets in the same unit.
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+
+# Resource limits. IOWeight is only a scheduling hint; per-device io.max is
+# OPS-04 and is applied by the deployment, not here.
+LimitNOFILE=65536
+TasksMax=512
+IOWeight=100
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,46 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 10
+    process: p1
+  - id: cyc
+    type: consumer
+    hz: 10
+    process: p2
+  - id: ev
+    type: sink
+    hz: 10
+    process: p3
+    exec: event
+edges:
+  - from: prod
+    to: cyc
+    channel: tick
+    cpp_type: Tick
+    transport: spsc
+    shm: _tick
+    delivery: broadcast
+    read: latest
+    record: true
+  - from: prod
+    to: ev
+    channel: tick
+    cpp_type: Tick
+    transport: spsc
+    shm: _tick
+    delivery: broadcast
+    read: follow
+    record: false
+processes:
+  - id: p1
+    role: prod
+  - id: p2
+    role: cyc
+  - id: p3
+    role: ev
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

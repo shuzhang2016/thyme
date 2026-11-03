@@ -1,0 +1,61 @@
+{
+  "configById": {
+    "thyme-p0-safety!RawMessages": {
+      "diffEnabled": false,
+      "showFullMessage": true,
+      "topicPath": "/thyme/safety_decision",
+      "expansion": "all"
+    },
+    "thyme-p0-can-long!RawMessages": {
+      "diffEnabled": false,
+      "showFullMessage": true,
+      "topicPath": "/thyme/can_out_long",
+      "expansion": "all"
+    },
+    "thyme-ego!RawMessages": {
+      "diffEnabled": false,
+      "showFullMessage": true,
+      "topicPath": "/thyme/ego_motion",
+      "expansion": "all"
+    },
+    "thyme-objects!RawMessages": {
+      "diffEnabled": false,
+      "showFullMessage": true,
+      "topicPath": "/thyme/object_list",
+      "expansion": "all"
+    },
+    "thyme-sm!RawMessages": {
+      "diffEnabled": false,
+      "showFullMessage": true,
+      "topicPath": "/thyme/state_machine",
+      "expansion": "all"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "linkedGlobalVariables": [],
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "direction": "column",
+      "first": "thyme-p0-safety!RawMessages",
+      "second": {
+        "direction": "column",
+        "first": "thyme-p0-can-long!RawMessages",
+        "second": "thyme-ego!RawMessages",
+        "splitPercentage": 50
+      },
+      "splitPercentage": 34
+    },
+    "second": {
+      "direction": "column",
+      "first": "thyme-objects!RawMessages",
+      "second": "thyme-sm!RawMessages",
+      "splitPercentage": 50
+    },
+    "splitPercentage": 55
+  }
+}

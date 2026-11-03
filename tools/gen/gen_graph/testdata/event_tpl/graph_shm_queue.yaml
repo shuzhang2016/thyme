@@ -1,0 +1,32 @@
+# Emit-only: cross-process delivery=queue in-edge into exec=event
+# (ShmSpscRing). Not compiled; test_event_app.cmake generates this to assert
+# MakeEventThread SetWakeWord.
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 50
+    process: p1
+  - id: sink
+    type: sink
+    hz: 50
+    process: p2
+    exec: event
+edges:
+  - from: prod
+    to: sink
+    channel: readings
+    cpp_type: Reading
+    transport: spsc
+    shm: _rd
+    delivery: queue
+processes:
+  - id: p1
+    role: p1
+  - id: p2
+    role: p2
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 2

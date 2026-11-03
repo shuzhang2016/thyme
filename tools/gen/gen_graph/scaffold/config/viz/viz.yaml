@@ -1,0 +1,38 @@
+# PC-side Foxglove viz profile for a generated application.
+# viz_bridge reads this via --config (CLI flags override these defaults).
+#
+# Channel names must match graph.yaml / generated/record_registry.h.
+
+version: 1
+
+bridge:
+  # Record mirror SHM is process-specific: /thyme_rec_<pid> (see record_mirror::DefaultShmName()).
+  # Do not hard-code a fixed name here — pass at runtime:
+  #   viz_bridge --shm /thyme_rec_<pid> --config config/viz/viz.yaml
+  # Match the mirror used by ad_stack (--record-shm NAME) or recorder (--shm NAME).
+  shm: ""
+  bind: 127.0.0.1
+  port: 8765
+  hz: 10
+  seconds: 0  # 0 = run until killed
+
+# Empty channels = advertise all registry topics.
+channels:
+  - safety_decision   # P0
+  - can_out_long      # P0
+  - can_out_lat       # P0
+  - ego_motion
+  - object_list
+  - state_machine
+  - road_model
+  # - obstacle        # large blob — enable when debugging perception
+  # - lane
+  # - radar
+
+# Optional L2 decoders for generated applications.
+# Plan A (now): Foxglove User Script; copy from decoders/*.userscript.example.ts
+# Plan C (future): viz_bridge runs these paths when --decode is implemented
+# decode:
+#   ego_motion: decoders/decode_ego_motion.py
+
+layout: viz.layout.json

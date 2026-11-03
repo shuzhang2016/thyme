@@ -1,0 +1,30 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 100
+    process: p1
+    wcet_ns: 1000000
+  - id: cons
+    type: consumer
+    hz: 20
+    process: p1
+    exec: event
+    wcet_ns: 10000000
+edges:
+  - from: prod
+    to: cons
+    channel: payload
+    cpp_type: Foo
+    pool: FooPool
+    transport: spsc
+    lossless: true
+    depth: 4
+processes:
+  - id: p1
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 2

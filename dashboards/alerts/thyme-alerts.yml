@@ -1,0 +1,436 @@
+# OBS-07 alert rules for the thyme observability metrics.
+#
+# Wiring:
+#   metrics  <- tools/inspect/thyme_metrics_exporter/thyme_metrics_exporter.py
+#               (Prometheus textfile collector; see docs/guides/observability-dashboards.md)
+#   rules    <- this file, loaded by Prometheus `rule_files:`
+#   runbook  <- docs/guides/runbook.md (section numbers below are that file's)
+#
+# Everything in `thyme.runtime` fires on a metric the exporter really emits.
+#
+# Thresholds are starting points derived from the design invariants, not from a
+# measured field baseline: 1 drop/s or 0.5 miss/s is already an outage-rate
+# defect, 0.01/s (~1 per 100 s) is the "any sustained drop is a bug" floor
+# (ARCH-05). Tune per deployment against G-PERF-1..7 baselines and record the
+# change next to the measurement.
+
+groups:
+  - name: thyme.runtime
+    interval: 30s
+    rules:
+      # ------------------------------------------------------------------
+      # Liveness / process roles (OPS-01, OPS-10)
+      # ------------------------------------------------------------------
+      - alert: ThymeStatusEndpointDown
+        expr: thyme_status_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: status
+        annotations:
+          summary: "thyme /status is unreachable"
+          description: >-
+            The exporter could not read the OPS-10 status socket for 2m. Either
+            the supervisor/session is gone or the socket path changed. Check
+            `curl --unix-socket /run/thyme/status.sock http://localhost/health`
+            and the unit state.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeStatusUnhealthy
+        expr: thyme_status_healthy == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: status
+        annotations:
+          summary: "thyme reports unhealthy"
+          description: >-
+            StatusSnapshot::healthy is false. This is the app's own liveness
+            verdict (`/health`), not a derived guess.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeRoleGaveUp
+        expr: thyme_role_state == 4
+        for: 1m
+        labels:
+          severity: critical
+          component: supervisor
+        annotations:
+          summary: "role {{ $labels.role }} gave up restarting"
+          description: >-
+            OPS-01 restart budget exhausted (state=4 gave_up); the supervisor
+            will not bring this role back on its own. Inspect
+            thyme_role_last_exit_code / thyme_role_last_term_signal.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeRoleNotRunning
+        expr: thyme_role_up == 0 and thyme_role_state != 5
+        for: 3m
+        labels:
+          severity: warning
+          component: supervisor
+        annotations:
+          summary: "role {{ $labels.role }} is not running"
+          description: >-
+            State is not `running` and not an intentional `stopped` (0
+            not_started / 2 terminating / 3 waiting_backoff). Backoff loops
+            show up here before they escalate to gave_up.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeRoleStalled
+        expr: thyme_role_stall_age_seconds > 5 and thyme_role_up == 1
+        for: 5m
+        labels:
+          severity: warning
+          component: supervisor
+        annotations:
+          summary: "role {{ $labels.role }} made no progress for 5s"
+          description: >-
+            stall_age_ms from the status snapshot keeps growing while the role
+            is `running`: the OPS-01 stall watchdog window (default 5s) is
+            exceeded.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeRoleRestartStorm
+        expr: increase(thyme_role_restarts_attempted_total[15m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          component: supervisor
+        annotations:
+          summary: "role {{ $labels.role }} restarted >3 times in 15m"
+          description: >-
+            Crash loop. Compare restarts_succeeded: attempts rising while
+            succeeded stays flat means the role dies before it can serve.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeExporterStale
+        expr: absent(thyme_status_up)
+        for: 5m
+        labels:
+          severity: warning
+          component: exporter
+        annotations:
+          summary: "thyme metrics are no longer scraped"
+          description: >-
+            The whole thyme_* family disappeared: the textfile bridge timer
+            stopped, the output file is missing, or the scrape target is gone.
+            Alerting on the metrics cannot work if this fires.
+          runbook: "docs/guides/observability-dashboards.md#4-running-the-bridge"
+
+      # ------------------------------------------------------------------
+      # Drop rate (HealthSlot::drop_cnt, ARCH-05 "no silent drops")
+      # ------------------------------------------------------------------
+      - alert: ThymeHealthDrops
+        expr: sum by (role) (rate(thyme_role_drops_total[5m])) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          component: runtime
+        annotations:
+          summary: "role {{ $labels.role }} drops ~{{ $value | humanize }} /s"
+          description: >-
+            A sustained non-zero HealthSlot drop rate. Drops come from a full
+            ring/queue or a pinned PinnedSlot slot; a slow drain (disk pressure,
+            runbook §1) or a storm (runbook §3) is the usual cause.
+          runbook: "docs/guides/runbook.md#3-trigger-storm"
+
+      - alert: ThymeHealthDropsCritical
+        expr: sum by (role) (rate(thyme_role_drops_total[5m])) > 1
+        for: 5m
+        labels:
+          severity: critical
+          component: runtime
+        annotations:
+          summary: "role {{ $labels.role }} drops >1/s"
+          description: >-
+            More than one dropped sample/message per second for 5m: the data
+            plane is no longer keeping up (queue capacity, pin budget, or
+            drain bandwidth).
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      # ------------------------------------------------------------------
+      # Deadline miss = overrun (cyclic: work > period, event: work > deadline)
+      # ------------------------------------------------------------------
+      - alert: ThymeOverrun
+        expr: sum by (role) (rate(thyme_role_deadline_misses_total[5m])) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          component: runtime
+        annotations:
+          summary: "role {{ $labels.role }} overruns ~{{ $value | humanize }} /s"
+          description: >-
+            HealthSlot::deadline_miss_cnt is the overrun counter for both
+            thread kinds (SCH-04/SCH-08). Sustained overruns break the
+            scheduling contract in docs/reference/scheduling-model.md §4. The SCH-08
+            reason split (long callback / backlog / preemption) is not
+            exported yet - see docs/guides/observability-dashboards.md §7.
+          runbook: "docs/reference/scheduling-model.md#4-overrun-counting-plus-skip--degrade--restart"
+
+      - alert: ThymeOverrunCritical
+        expr: sum by (role) (rate(thyme_role_deadline_misses_total[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          component: runtime
+        annotations:
+          summary: "role {{ $labels.role }} overruns >0.5/s"
+          description: >-
+            Half the deadlines are being missed every second; expect frame
+            drops and stale output. Take the node's perf dump (OBS-03) and the
+            merged timeline before any restart.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeSchedMismatch
+        expr: increase(thyme_role_sched_mismatches_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: runtime
+        annotations:
+          summary: "role {{ $labels.role }} cannot get its requested scheduling"
+          description: >-
+            SCH-08: the kernel did not apply the requested policy/priority/
+            affinity (typically FIFO without CAP_SYS_NICE). Latency budgets
+            measured elsewhere no longer hold.
+          runbook: "docs/reference/scheduling-model.md#5-scheduling-observability"
+
+      # ------------------------------------------------------------------
+      # Trigger path (storm, audit trail)
+      # ------------------------------------------------------------------
+      - alert: ThymeTriggerStorm
+        expr: rate(thyme_trigger_relay_debounced_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: trigger
+        annotations:
+          summary: "trigger relay is debouncing >1/s"
+          description: >-
+            The relay coalesced more than one trigger per second for 5m: the
+            storm signature from runbook §3. Check the audit log for the
+            source names before throttling anything.
+          runbook: "docs/guides/runbook.md#3-trigger-storm"
+
+      - alert: ThymeRelayInflightHigh
+        expr: thyme_trigger_relay_inflight > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: trigger
+        annotations:
+          summary: "{{ $value }} trigger relays unacknowledged"
+          description: >-
+            (trigger_req_seq - trigger_ack_seq) mod 2^32 from the status
+            snapshot stays above 10: the recorder is not consuming the relay.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      - alert: ThymeAuditTailTorn
+        expr: thyme_trigger_audit_unparsed_lines > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: audit
+        annotations:
+          summary: "audit log has {{ $value }} unparsable line(s)"
+          description: >-
+            A line without `req=` is the crash-truncated tail SEC-02 warns
+            about (or a format drift). It is NOT CenterStats::audit_drops;
+            that live counter is exported separately from recorder status-json.
+          runbook: "docs/guides/runbook.md#4-crash-recovery"
+
+      # ------------------------------------------------------------------
+      # Disk / SHM pressure (runbook §1, §2)
+      # ------------------------------------------------------------------
+      - alert: ThymeDiskFull
+        expr: thyme_filesystem_used_percent > 95
+        for: 5m
+        labels:
+          severity: critical
+          component: recorder
+        annotations:
+          summary: "recorder filesystem {{ $labels.mount }} is >95% full"
+          description: >-
+            At this level the drain hits ENOSPC: retention runs once,
+            non-crash triggers get code=quota_exceeded, crash-level triggers
+            still write into high/.
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      - alert: ThymeDiskPressure
+        expr: thyme_filesystem_used_percent > 85
+        for: 15m
+        labels:
+          severity: warning
+          component: recorder
+        annotations:
+          summary: "recorder filesystem {{ $labels.mount }} is >85% full"
+          description: >-
+            Headroom for one burst capture is gone; either disk_quota_mb is
+            oversized or retention is not freeing (incomplete_policy=keep).
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      - alert: ThymeShmPressure
+        expr: thyme_shm_used_percent > 80
+        for: 15m
+        labels:
+          severity: warning
+          component: shm
+        annotations:
+          summary: "/dev/shm is >80% full"
+          description: >-
+            SHM segment leak (OPS-02). Do not delete segments by hand: the
+            reclaim path proves staleness with a file lease.
+          runbook: "docs/guides/runbook.md#2-shm-leak-stale-devshm-segments"
+
+      - alert: ThymeShmObjectsGrowth
+        expr: delta(thyme_shm_objects[30m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          component: shm
+        annotations:
+          summary: "/dev/shm gained {{ $value }} objects in 30m"
+          description: >-
+            Object count growth without a matching session churn is the leak
+            symptom runbook §2 describes (`ls -l /dev/shm`).
+          runbook: "docs/guides/runbook.md#2-shm-leak-stale-devshm-segments"
+
+      # ------------------------------------------------------------------
+      # PinnedSlot lease counters (BF-03/BF-04, from thyme_probe)
+      # ------------------------------------------------------------------
+      - alert: ThymePinnedSkip
+        expr: sum by (page) (increase(thyme_shm_page_pinned_skip_total[10m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: pinned_slot
+        annotations:
+          summary: "{{ $labels.page }} skipped pinned slots"
+          description: >-
+            BF-03: the writer advanced head without publishing because the
+            target slot was pinned - a real frame drop, visible to readers as
+            a hole. Compare against the deployment baseline before paging.
+          runbook: "docs/guides/runbook.md#3-trigger-storm"
+
+      - alert: ThymePinnedSkipCritical
+        expr: sum by (page) (increase(thyme_shm_page_pinned_skip_total[10m])) > 100
+        for: 1m
+        labels:
+          severity: critical
+          component: pinned_slot
+        annotations:
+          summary: "{{ $labels.page }} skipped >100 pinned slots in 10m"
+          description: >-
+            Reader pins are accumulating: a stalled consumer, an R too close
+            to N (BF-07 capacity), or a drain that cannot keep up.
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      - alert: ThymeLeaseSteal
+        expr: increase(thyme_shm_page_lease_steal_total[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: pinned_slot
+        annotations:
+          summary: "{{ $labels.page }} had a lease stolen"
+          description: >-
+            BF-04: a lease expired while its reader was still registered. That
+            is either a dead/stuck reader or a lease-timeout misconfiguration;
+            after a steal the old reader must not touch the slot.
+          runbook: "docs/guides/runbook.md#2-shm-leak-stale-devshm-segments"
+
+      - alert: ThymeShmPageDrops
+        expr: sum by (page) (rate(thyme_shm_page_drops_total[5m])) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          component: shm
+        annotations:
+          summary: "{{ $labels.page }} drops ~{{ $value | humanize }} /s"
+          description: >-
+            Container-specific drop counter from the page (ring push failure,
+            PinnedSlot oversize drop, mirror drop). Each one is silent data loss
+            unless a GAP record covers it.
+          runbook: "docs/guides/runbook.md#3-trigger-storm"
+
+      - alert: ThymeShmPageIncompatible
+        expr: thyme_shm_page_compatible == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: shm
+        annotations:
+          summary: "{{ $labels.page }} has an incompatible ABI/geometry"
+          description: >-
+            The probe refused the page layout (see docs/reference/abi-compatibility.md).
+            A mixed-version deployment: the reader/writer pair cannot be
+            trusted until versions match.
+          runbook: "docs/guides/runbook.md#2-shm-leak-stale-devshm-segments"
+
+      - alert: ThymeAuditDrops
+        expr: thyme_trigger_audit_drops_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: audit
+        annotations:
+          summary: "audit records are being dropped"
+          description: >-
+            CenterStats::audit_drops counts records Append() could not write
+            (full disk, short write). It is exported by the recorder's
+            status-json trigger block.
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      - alert: ThymeServiceLogDrops
+        expr: increase(thyme_service_log_records_dropped_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: logging
+        annotations:
+          summary: "service log records are being dropped"
+          description: >-
+            The configured service file sink could not write records (disk
+            full, short write, or unavailable sink). Check service_file and
+            the process log budget before diagnostics are lost.
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      - alert: ThymeFsmEventDrops
+        expr: thyme_trigger_fsm_event_drops_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: trigger
+        annotations:
+          summary: "trigger FSM event ring overflowed"
+          description: >-
+            OBS-05 ring (256 entries) overwrote unflushed FSM events. The .fsm
+            file then has a gap; the counter comes from recorder status-json.
+          runbook: "docs/guides/runbook.md#3-trigger-storm"
+
+      - alert: ThymeRecorderDiskErrors
+        expr: thyme_recorder_disk_errors_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          component: recorder
+        annotations:
+          summary: "recorder drain writes are failing"
+          description: >-
+            TriggeredRecorder::Stats::disk_errors is exported live by the
+            recorder status-json stats block.
+          runbook: "docs/guides/runbook.md#1-disk-full-enospc"
+
+      - alert: ThymePerfNodeDeadlineSLO
+        expr: thyme_perf_latency_quantile_ns{quantile="0.99",series_kind="latency"} > (thyme_perf_node_deadline_ns > 0)
+        for: 5m
+        labels:
+          severity: warning
+          component: perf
+        annotations:
+          summary: "node p99 latency exceeds its dispatch deadline"
+          description: >-
+            Compare the OBS-09 latency p99 with the declared graph-node budget
+            from perf type-9 metadata on the same node.
+          runbook: "docs/usage/perf.md"

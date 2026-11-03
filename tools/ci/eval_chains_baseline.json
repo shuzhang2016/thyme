@@ -1,0 +1,46 @@
+{
+  "comment": "OBS-10 eval_chains cpu/io/irq baselines. Keyed by runner tag, same convention as tools/ci/bench_baseline.json: x86_64-local is the development machine and is reference-only evidence until the runner tags a baseline, x86_64-ci is the GitLab runner and records its own with --write-baseline. Never copy numbers between runners. tolerance_pct is deliberately wide because the chain latency is bimodal under synthetic load on a shared host; lower it per runner once the history is stable.",
+  "tolerance_pct": 100.0,
+  "runners": {
+    "x86_64-local": {
+      "recorded_at": "2026-10-24T05:59:21Z",
+      "git_sha": "a3f1a05",
+      "build_type": "Release",
+      "host": {
+        "hostname": "shu-desktop",
+        "machine": "x86_64",
+        "cpu": "12th Gen Intel(R) Core(TM) i5-12490F",
+        "cpu_count": 12
+      },
+      "scenarios": {
+        "cpu": {
+          "frames": 2020,
+          "broken": 1,
+          "broken_pct": 0.05,
+          "metrics": {
+            "frames_per_sec": 202.0,
+            "e2e_p95_ns": 2539520
+          }
+        },
+        "io": {
+          "frames": 2021,
+          "broken": 0,
+          "broken_pct": 0.0,
+          "metrics": {
+            "frames_per_sec": 202.1,
+            "e2e_p95_ns": 2523136
+          }
+        },
+        "irq": {
+          "frames": 2020,
+          "broken": 1,
+          "broken_pct": 0.05,
+          "metrics": {
+            "frames_per_sec": 202.0,
+            "e2e_p95_ns": 2589696
+          }
+        }
+      }
+    }
+  }
+}

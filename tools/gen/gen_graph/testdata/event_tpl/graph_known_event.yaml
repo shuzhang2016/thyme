@@ -1,0 +1,28 @@
+# Known catalog type + exec=event (no _ev type clone). Complements graph.yaml
+# (unknown event consumers) for gen_graph emit checks.
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 50
+    process: main
+  - id: cons
+    type: consumer
+    hz: 50
+    process: main
+    exec: event
+edges:
+  - from: prod
+    to: cons
+    channel: readings
+    cpp_type: Reading
+    transport: spsc
+    record_priority: p0
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

@@ -1,0 +1,13 @@
+{
+  "next_pow2": [
+    {"in": 1, "out": 1},
+    {"in": 2, "out": 2},
+    {"in": 5, "out": 8},
+    {"in": 8, "out": 8}
+  ],
+  "suggest": [
+    {"producer": 30, "consumer": 20, "k": 3, "out": 8},
+    {"producer": 10, "consumer": 40, "k": 3, "out": 2},
+    {"producer": 10, "consumer": 30, "k": 2, "out": 2}
+  ]
+}

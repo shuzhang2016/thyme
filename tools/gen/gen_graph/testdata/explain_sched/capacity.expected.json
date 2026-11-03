@@ -1,0 +1,134 @@
+{
+  "schema": "thyme.gen_graph.sched.v1",
+  "policy": {
+    "priority_min": 1,
+    "priority_max": 99,
+    "reserved_min": 90,
+    "reserved_max": 99,
+    "graph_min": 1,
+    "graph_max": 89,
+    "default_priority": 10,
+    "priority_mode": "best_effort",
+    "admission_mode": "error",
+    "admission_reject_above": 1.000000,
+    "admission_warn_above": 0.900000,
+    "admission_status": "ok",
+    "capacity_mode": "error",
+    "capacity_status": "ok"
+  },
+  "topological_order": ["producer", "consumer"],
+  "nodes": [
+    {
+      "id": "producer",
+      "type": "tick",
+      "exec": "cyclic",
+      "hz": 100,
+      "period_ns": 10000000,
+      "period_basis": "hz_period",
+      "rm_eligible": true,
+      "wcet_ns": 1000000,
+      "wcet_known": true,
+      "priority": 89,
+      "priority_source": "rate_monotonic",
+      "core": 0,
+      "multi_core": false,
+      "phase_ns": 0,
+      "phase_in_period_ns": 0,
+      "phase_complete": true,
+      "in_feedback_loop": false
+    },
+    {
+      "id": "consumer",
+      "type": "tick",
+      "exec": "event",
+      "hz": 20,
+      "period_ns": 50000000,
+      "period_basis": "hz_message_rate",
+      "rm_eligible": false,
+      "wcet_ns": 10000000,
+      "wcet_known": true,
+      "priority": 40,
+      "priority_source": "explicit",
+      "core": 0,
+      "multi_core": false,
+      "phase_ns": 1000000,
+      "phase_in_period_ns": 1000000,
+      "phase_complete": true,
+      "in_feedback_loop": false
+    }
+  ],
+  "feedback_edges": [
+  ],
+  "cycles": {
+    "rejected": false,
+    "feedback_loop_nodes": []
+  },
+  "cores": [
+    {
+      "core": 0,
+      "status": "analyzed",
+      "utilization": 0.300000,
+      "overloaded": false,
+      "above_warn": false,
+      "admission_applicable": true,
+      "nodes": ["producer", "consumer"],
+      "unknown_nodes": []
+    }
+  ],
+  "chains": [
+    {
+      "sink": "consumer",
+      "nodes": ["producer", "consumer"],
+      "end_to_end_ns": 11000000,
+      "completion_ns": 11000000,
+      "deadline_ns": 10000000,
+      "complete": true,
+      "slack_known": true,
+      "slack_ns": -1000000,
+      "unknown_nodes": []
+    }
+  ],
+  "capacities": [
+    {
+      "from": "producer",
+      "to": "consumer",
+      "channel": "frames",
+      "kind": "lossless",
+      "delivery": "notify",
+      "rate_hz": 100,
+      "lag_ns": 60000000,
+      "lag_basis": "consumer_period+wcet_ns",
+      "pin_budget": 0,
+      "capacity": 8,
+      "required_slots": 6,
+      "suggested_capacity": 8,
+      "known": true,
+      "sufficient": true,
+      "best_effort": false,
+      "status": "ok",
+      "unknown_reason": null
+    },
+    {
+      "from": "producer",
+      "to": "consumer",
+      "channel": "frames",
+      "kind": "pin_window",
+      "delivery": "notify",
+      "rate_hz": 100,
+      "lag_ns": 35000000,
+      "lag_basis": "before_ms+after_ms+per_frame_write_ms",
+      "pin_budget": 2,
+      "capacity": 8,
+      "required_slots": 6,
+      "suggested_capacity": 8,
+      "known": true,
+      "sufficient": true,
+      "best_effort": false,
+      "status": "ok",
+      "unknown_reason": null
+    }
+  ],
+  "notes": [],
+  "warnings": [],
+  "errors": []
+}

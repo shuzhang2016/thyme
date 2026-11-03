@@ -1,0 +1,162 @@
+{
+  "schema": 2,
+  "comment": "PERF-06 per-runner bench baselines. Keyed by runner tag and recording host: x86_64-local is the development machine and is reference-only evidence; x86_64-ci is the GitLab runner and records its own with --write-baseline (until then the gate reports no-baseline and skips). Never copy numbers between runners. tolerance_ns_per_op_pct / tolerance_p99_pct / tolerance_p999_pct are the allowed regressions for the steady-state, p99 and p999 statistics (see docs/guides/bench-baselines.md).",
+  "tolerance_ns_per_op_pct": 25.0,
+  "tolerance_p99_pct": 50.0,
+  "tolerance_p999_pct": 100.0,
+  "unset_runners": {
+    "x86_64-ci": "no baseline recorded yet: nightly-bench reports no-baseline and skips until the first CI run is recorded with --write-baseline on the x86_64-ci runner"
+  },
+  "runners": {
+    "x86_64-local": {
+      "recorded_at": "2026-10-24T09:16:11Z",
+      "git_sha": "5d91ea5",
+      "toolchain": "GCC 11.4.0",
+      "build_type": "Release",
+      "hostname": "shu-desktop",
+      "cpu": "12th Gen Intel(R) Core(TM) i5-12490F",
+      "benchmarks": {
+        "latest_slot_write_read": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 47.1438,
+          "p99_ns_per_op": 76.0,
+          "p999_ns_per_op": 95.0,
+          "gbps": 21.721,
+          "bytes_per_op": 1024,
+          "iterations": 1000000
+        },
+        "spsc_ring_push_pop": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 15.7035,
+          "p99_ns_per_op": 37.0,
+          "p999_ns_per_op": 88.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 1000000
+        },
+        "pinned_slot_copy_payload_to_19mib": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 2197874.125,
+          "p99_ns_per_op": 2971560.0,
+          "p999_ns_per_op": 3008404.0,
+          "gbps": 9.065,
+          "bytes_per_op": 19922944,
+          "iterations": 8
+        },
+        "pinned_slot_read_frame_stable_19mib": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 2087727.6,
+          "p99_ns_per_op": 2661566.0,
+          "p999_ns_per_op": 2897881.0,
+          "gbps": 9.543,
+          "bytes_per_op": 19922944,
+          "iterations": 5
+        },
+        "trigger_config_load": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 9865.2233,
+          "p99_ns_per_op": 13326.0,
+          "p999_ns_per_op": 15424.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 300
+        },
+        "latest_slot_inplace_write_read": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 34.4811,
+          "p99_ns_per_op": 53.0,
+          "p999_ns_per_op": 56.0,
+          "gbps": 29.697,
+          "bytes_per_op": 1024,
+          "iterations": 1000000
+        },
+        "spsc_ring_notify_no_waiter": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 4.6497,
+          "p99_ns_per_op": 19.0,
+          "p999_ns_per_op": 20.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 1000000
+        },
+        "spsc_ring_wake_one_waiter": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 974.692,
+          "p99_ns_per_op": 2297.0,
+          "p999_ns_per_op": 3040.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 500
+        },
+        "ref_publish_release_fence": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 7.5254,
+          "p99_ns_per_op": 21.0,
+          "p999_ns_per_op": 21.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 500000
+        },
+        "ref_publish_sc_store": {
+          "bench": "thyme-bench-core",
+          "ns_per_op": 4.2676,
+          "p99_ns_per_op": 20.0,
+          "p999_ns_per_op": 20.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 500000
+        },
+        "object_pool_fragmented_scan": {
+          "bench": "thyme-bench-object-pool",
+          "ns_per_op": 53270.084,
+          "p99_ns_per_op": 66750.0,
+          "p999_ns_per_op": 76466.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 2000
+        },
+        "object_pool_fragmented_freelist": {
+          "bench": "thyme-bench-object-pool",
+          "ns_per_op": 29.7247,
+          "p99_ns_per_op": 39.0,
+          "p999_ns_per_op": 41.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 200000
+        },
+        "object_pool_dense_scan": {
+          "bench": "thyme-bench-object-pool",
+          "ns_per_op": 18.3153,
+          "p99_ns_per_op": 51.0,
+          "p999_ns_per_op": 52.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 500000
+        },
+        "object_pool_dense_freelist": {
+          "bench": "thyme-bench-object-pool",
+          "ns_per_op": 29.0126,
+          "p99_ns_per_op": 47.0,
+          "p999_ns_per_op": 47.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 500000
+        },
+        "trigger_to_seal": {
+          "bench": "thyme-bench-trigger-seal",
+          "ns_per_op": 78370371.0,
+          "p99_ns_per_op": 81257046.0,
+          "p999_ns_per_op": 81257046.0,
+          "gbps": null,
+          "bytes_per_op": 0,
+          "iterations": 64
+        }
+      },
+      "host": {
+        "hostname": "shu-desktop",
+        "machine": "x86_64"
+      },
+      "role": "reference-only"
+    }
+  }
+}

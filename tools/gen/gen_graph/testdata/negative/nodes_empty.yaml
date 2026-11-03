@@ -1,0 +1,11 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes: []
+edges: []
+processes:
+  - id: p1
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 2

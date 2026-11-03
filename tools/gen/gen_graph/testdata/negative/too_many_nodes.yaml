@@ -1,0 +1,271 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: n0
+    type: worker
+    hz: 10
+    process: p1
+  - id: n1
+    type: worker
+    hz: 10
+    process: p1
+  - id: n2
+    type: worker
+    hz: 10
+    process: p1
+  - id: n3
+    type: worker
+    hz: 10
+    process: p1
+  - id: n4
+    type: worker
+    hz: 10
+    process: p1
+  - id: n5
+    type: worker
+    hz: 10
+    process: p1
+  - id: n6
+    type: worker
+    hz: 10
+    process: p1
+  - id: n7
+    type: worker
+    hz: 10
+    process: p1
+  - id: n8
+    type: worker
+    hz: 10
+    process: p1
+  - id: n9
+    type: worker
+    hz: 10
+    process: p1
+  - id: n10
+    type: worker
+    hz: 10
+    process: p1
+  - id: n11
+    type: worker
+    hz: 10
+    process: p1
+  - id: n12
+    type: worker
+    hz: 10
+    process: p1
+  - id: n13
+    type: worker
+    hz: 10
+    process: p1
+  - id: n14
+    type: worker
+    hz: 10
+    process: p1
+  - id: n15
+    type: worker
+    hz: 10
+    process: p1
+  - id: n16
+    type: worker
+    hz: 10
+    process: p1
+  - id: n17
+    type: worker
+    hz: 10
+    process: p1
+  - id: n18
+    type: worker
+    hz: 10
+    process: p1
+  - id: n19
+    type: worker
+    hz: 10
+    process: p1
+  - id: n20
+    type: worker
+    hz: 10
+    process: p1
+  - id: n21
+    type: worker
+    hz: 10
+    process: p1
+  - id: n22
+    type: worker
+    hz: 10
+    process: p1
+  - id: n23
+    type: worker
+    hz: 10
+    process: p1
+  - id: n24
+    type: worker
+    hz: 10
+    process: p1
+  - id: n25
+    type: worker
+    hz: 10
+    process: p1
+  - id: n26
+    type: worker
+    hz: 10
+    process: p1
+  - id: n27
+    type: worker
+    hz: 10
+    process: p1
+  - id: n28
+    type: worker
+    hz: 10
+    process: p1
+  - id: n29
+    type: worker
+    hz: 10
+    process: p1
+  - id: n30
+    type: worker
+    hz: 10
+    process: p1
+  - id: n31
+    type: worker
+    hz: 10
+    process: p1
+  - id: n32
+    type: worker
+    hz: 10
+    process: p1
+  - id: n33
+    type: worker
+    hz: 10
+    process: p1
+  - id: n34
+    type: worker
+    hz: 10
+    process: p1
+  - id: n35
+    type: worker
+    hz: 10
+    process: p1
+  - id: n36
+    type: worker
+    hz: 10
+    process: p1
+  - id: n37
+    type: worker
+    hz: 10
+    process: p1
+  - id: n38
+    type: worker
+    hz: 10
+    process: p1
+  - id: n39
+    type: worker
+    hz: 10
+    process: p1
+  - id: n40
+    type: worker
+    hz: 10
+    process: p1
+  - id: n41
+    type: worker
+    hz: 10
+    process: p1
+  - id: n42
+    type: worker
+    hz: 10
+    process: p1
+  - id: n43
+    type: worker
+    hz: 10
+    process: p1
+  - id: n44
+    type: worker
+    hz: 10
+    process: p1
+  - id: n45
+    type: worker
+    hz: 10
+    process: p1
+  - id: n46
+    type: worker
+    hz: 10
+    process: p1
+  - id: n47
+    type: worker
+    hz: 10
+    process: p1
+  - id: n48
+    type: worker
+    hz: 10
+    process: p1
+  - id: n49
+    type: worker
+    hz: 10
+    process: p1
+  - id: n50
+    type: worker
+    hz: 10
+    process: p1
+  - id: n51
+    type: worker
+    hz: 10
+    process: p1
+  - id: n52
+    type: worker
+    hz: 10
+    process: p1
+  - id: n53
+    type: worker
+    hz: 10
+    process: p1
+  - id: n54
+    type: worker
+    hz: 10
+    process: p1
+  - id: n55
+    type: worker
+    hz: 10
+    process: p1
+  - id: n56
+    type: worker
+    hz: 10
+    process: p1
+  - id: n57
+    type: worker
+    hz: 10
+    process: p1
+  - id: n58
+    type: worker
+    hz: 10
+    process: p1
+  - id: n59
+    type: worker
+    hz: 10
+    process: p1
+  - id: n60
+    type: worker
+    hz: 10
+    process: p1
+  - id: n61
+    type: worker
+    hz: 10
+    process: p1
+  - id: n62
+    type: worker
+    hz: 10
+    process: p1
+  - id: n63
+    type: worker
+    hz: 10
+    process: p1
+  - id: n64
+    type: worker
+    hz: 10
+    process: p1
+edges: []
+processes:
+  - id: p1
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 65

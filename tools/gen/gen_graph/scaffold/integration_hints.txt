@@ -1,0 +1,3 @@
+# integration_hints.txt — per node type SDK / manual checklist (project-specific)
+# Format: type|sdk_label|step1;step2;step3
+# Emitted into generated/integration.md; not shared across all projects.

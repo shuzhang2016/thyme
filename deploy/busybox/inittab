@@ -1,0 +1,19 @@
+# BusyBox init fallback for images without systemd (target image).
+#
+# Append the respawn line to /etc/inittab. BusyBox init re-runs the command
+# whenever it exits, which is the equivalent of systemd's Restart=always for
+# this one service. `run` execs the supervisor in the foreground (and records
+# its PID), so PID 1 supervises the real process.
+#
+# Only ONE thyme supervisor may run per image: either use this line or start
+# it from rcS (/etc/init.d/thyme-app start), never both. With respawn active,
+# `stop` cannot defeat PID 1; for maintenance comment the line out and
+# `kill -HUP 1`, then run /etc/init.d/thyme-app stop.
+#
+# No watchdog here: BusyBox init only notices process death. Role stalls are
+# still covered by OPS-01 inside the supervisor, and a hung supervisor is
+# caught by the health endpoint from external monitoring (OPS-10).
+
+# -- thyme supervisor (respawn on exit) --------------------------------------
+::respawn:/etc/init.d/thyme-app run
+::shutdown:/etc/init.d/thyme-app stop

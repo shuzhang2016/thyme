@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "hash": "0x5c5e64e17ea832a1",
+  "channels": [
+    {"channel": "payload", "from": "prod", "to": "cons", "shm": "", "transport_kind": "frame", "retention": "latest", "readers": "one", "overflow": "overwrite", "recordable": true, "replay_gate": false, "lease_required": false, "hub_required": false, "max_wire_bytes": 0, "slot_count": 0}
+  ]
+}

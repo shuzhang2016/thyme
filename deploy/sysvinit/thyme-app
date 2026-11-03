@@ -1,0 +1,194 @@
+#!/bin/sh
+# SysV/BusyBox init script for the thyme supervisor (no systemd).
+#
+# Actions: start | stop | restart | status | run
+#
+#   start    daemonise via start-stop-daemon (PID file /run/thyme-app.pid)
+#   stop     SIGTERM, 15s grace, then SIGKILL; removes the PID file
+#   restart  stop && start
+#   status   PID-file liveness (exit 0 running, 1 dead pidfile, 3 stopped)
+#   run      foreground exec; use as `::respawn:/etc/init.d/thyme-app run`
+#            in /etc/inittab so BusyBox init provides automatic restart
+#
+# Environment: sourced from /etc/thyme/thyme-app.env (plain KEY=VALUE, the
+# same subset systemd's EnvironmentFile= accepts). The account defaults to
+# thyme:thyme; set THYME_USER= (empty) to run as the invoking user, which is
+# NOT recommended. THYME_LOG_FILE defaults to /var/log/thyme/app.log.
+#
+# Note on automatic restart: this script's `start` action starts one process;
+# if it dies, nothing restarts it. For the BusyBox watchdog effect, use the
+# inittab `::respawn:` line (deploy/busybox/inittab). In that mode `stop` only
+# works after the respawn line is disabled -- PID 1 cannot be told to stop
+# respawning one entry, so comment the line out and `kill -HUP 1` first.
+
+### BEGIN INIT INFO
+# Provides:          thyme-app
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: thyme dataflow supervisor
+# Description:       Starts the thyme multi-process supervisor (OPS-01/03).
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+NAME=thyme-app
+RUNNER=${THYME_RUNNER:-/usr/libexec/thyme/thyme-app-run}
+ENV_FILE=${THYME_ENV_FILE:-/etc/thyme/thyme-app.env}
+
+if [ -r "$ENV_FILE" ]; then
+  . "$ENV_FILE"
+fi
+
+PIDFILE=${THYME_PIDFILE:-/run/thyme-app.pid}
+LOGFILE=${THYME_LOG_FILE:-/var/log/thyme/app.log}
+USER_NAME=${THYME_USER-thyme}
+GROUP_NAME=${THYME_GROUP-thyme}
+
+pid_of() {
+  cat "$PIDFILE" 2>/dev/null
+}
+
+is_running() {
+  pid=$(pid_of)
+  case "$pid" in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  kill -0 "$pid" 2>/dev/null
+}
+
+start() {
+  if is_running; then
+    echo "$NAME already running (pid $(pid_of))"
+    return 0
+  fi
+  if [ ! -x "$RUNNER" ]; then
+    echo "$NAME: $RUNNER is missing or not executable" >&2
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$PIDFILE")" || return 1
+  if [ -n "$LOGFILE" ]; then
+    mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
+    if [ "$(id -u)" = 0 ] && [ -n "$USER_NAME" ] &&
+       id "$USER_NAME" >/dev/null 2>&1; then
+      if [ -n "$GROUP_NAME" ]; then
+        chown "$USER_NAME:$GROUP_NAME" "$(dirname "$LOGFILE")" 2>/dev/null || true
+      else
+        chown "$USER_NAME" "$(dirname "$LOGFILE")" 2>/dev/null || true
+      fi
+    fi
+  fi
+
+  export THYME_LOG_FILE="$LOGFILE"
+
+  if command -v start-stop-daemon >/dev/null 2>&1; then
+    chuid=""
+    if [ -n "$USER_NAME" ]; then
+      if id "$USER_NAME" >/dev/null 2>&1; then
+        chuid="$USER_NAME"
+        [ -n "$GROUP_NAME" ] && chuid="$chuid:$GROUP_NAME"
+      else
+        echo "$NAME: warning: user $USER_NAME does not exist; running as $(id -un)" >&2
+      fi
+    fi
+    # -S start, -b background, -m make pidfile, -p pidfile, -a startas,
+    # -c chuid. Short options are the portable BusyBox spelling.
+    if [ -n "$chuid" ]; then
+      start-stop-daemon -S -b -m -p "$PIDFILE" -a "$RUNNER" -c "$chuid" || return 1
+    else
+      start-stop-daemon -S -b -m -p "$PIDFILE" -a "$RUNNER" || return 1
+    fi
+  else
+    "$RUNNER" >/dev/null 2>&1 &
+    echo $! >"$PIDFILE"
+  fi
+
+  i=0
+  while [ "$i" -lt 5 ]; do
+    if is_running; then
+      echo "started $NAME (pid $(pid_of))"
+      return 0
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  echo "$NAME failed to start (see $LOGFILE)" >&2
+  return 1
+}
+
+stop() {
+  if ! is_running; then
+    rm -f "$PIDFILE"
+    echo "$NAME not running"
+    return 0
+  fi
+  pid=$(pid_of)
+  echo "stopping $NAME (pid $pid)"
+  kill -TERM "$pid" 2>/dev/null || true
+  i=0
+  while [ "$i" -lt 15 ]; do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 1
+    i=$((i + 1))
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    echo "$NAME did not stop within 15s; sending SIGKILL" >&2
+    kill -KILL "$pid" 2>/dev/null || true
+  fi
+  rm -f "$PIDFILE"
+  return 0
+}
+
+status() {
+  if is_running; then
+    echo "$NAME running (pid $(pid_of))"
+    if [ -n "${THYME_STATUS_SOCKET:-}" ]; then
+      echo "health: curl --unix-socket $THYME_STATUS_SOCKET http://localhost/health"
+    fi
+    return 0
+  fi
+  if [ -e "$PIDFILE" ]; then
+    echo "$NAME dead but pidfile $PIDFILE exists"
+    return 1
+  fi
+  echo "$NAME not running"
+  return 3
+}
+
+# Foreground mode for /etc/inittab ::respawn:. PID 1 supervises the process;
+# the PID file records the exec'd PID so status/stop and the shutdown hook can
+# find it. BusyBox inittab has no uid field, so this mode runs with PID 1's uid
+# (root); use the `start` action (start-stop-daemon -c) when privilege
+# separation is mandatory.
+run() {
+  if [ ! -x "$RUNNER" ]; then
+    echo "$NAME: $RUNNER is missing or not executable" >&2
+    sleep 30
+    return 1
+  fi
+  if [ "$(id -u)" = 0 ] && [ -n "$USER_NAME" ] &&
+     id "$USER_NAME" >/dev/null 2>&1; then
+    echo "$NAME: warning: inittab respawn runs as root; 'start' uses -c $USER_NAME" >&2
+  fi
+  mkdir -p "$(dirname "$PIDFILE")" "$(dirname "$LOGFILE")" 2>/dev/null || true
+  echo $$ >"$PIDFILE" 2>/dev/null || true
+  THYME_LOG_FILE=${THYME_LOG_FILE:-$LOGFILE}
+  export THYME_LOG_FILE
+  exec "$RUNNER"
+}
+
+case "${1:-}" in
+  start) start ;;
+  stop) stop ;;
+  restart)
+    stop
+    start
+    ;;
+  status) status ;;
+  run) run ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status|run}" >&2
+    exit 2
+    ;;
+esac

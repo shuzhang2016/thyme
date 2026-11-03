@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "namespace": "lsl",
+  "frame_magic": "TSTL",
+  "frame_version": 3,
+  "types": [
+    {
+      "name": "OneField_t",
+      "fields": [
+        { "name": "only", "type": "uint64" }
+      ]
+    },
+    {
+      "name": "Elem_t",
+      "fields": [
+        { "name": "x", "type": "float32" },
+        { "name": "y", "type": "uint8" }
+      ]
+    },
+    {
+      "name": "Padded_t",
+      "fields": [
+        { "name": "a", "type": "uint8"  },
+        { "name": "b", "type": "uint64" },
+        { "name": "c", "type": "uint16" },
+        { "name": "d", "type": "uint8"  }
+      ]
+    },
+    {
+      "name": "Arrays_t",
+      "fields": [
+        { "name": "u16x3", "type": "uint16", "count": 3 },
+        { "name": "elems", "type": "Elem_t", "count": 2 },
+        { "name": "tail",  "type": "uint8",  "count": 5 }
+      ]
+    },
+    {
+      "name": "Nested_t",
+      "fields": [
+        { "name": "head",   "type": "uint8"      },
+        { "name": "one",    "type": "OneField_t" },
+        { "name": "padded", "type": "Padded_t"   },
+        { "name": "tail",   "type": "uint32"     }
+      ]
+    }
+  ]
+}

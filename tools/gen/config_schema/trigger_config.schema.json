@@ -1,0 +1,935 @@
+{
+  "schema_version": 1,
+  "parser_layer": "handwritten",
+  "description": "Single source for trigger_center INI section/key metadata. ARCH-13 covers trigger_center/recorder/logging/security/continuous/chassis/quota.*/source.*/channel.*. Value assignment stays in trigger_config.cpp (handwritten parser layer); this schema owns keys, docs, reload class and validation.",
+  "sections": [
+    {
+      "name": "trigger_center",
+      "keys": [
+        {
+          "key": "socket",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "path",
+          "default": "/tmp/thyme_trigger.sock",
+          "sample": "/tmp/thyme_schema_trigger.sock",
+          "contract": "TRG-17",
+          "note": "trigger datagram socket path (startup-only)",
+          "reload_note": "the listening socket survives the reload"
+        },
+        {
+          "key": "max_concurrent_captures",
+          "status": "implemented",
+          "reload": "fixed",
+          "type": "uint32",
+          "default": "1",
+          "sample": "1",
+          "contract": "TRG-11",
+          "note": "only `1` supported; `> 1` is a parse error",
+          "reload_note": "`1` only; `> 1` is a parse error and there is no reload delta"
+        },
+        {
+          "key": "tick_ms",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "1",
+          "sample": "2",
+          "contract": "TRG-19",
+          "note": "host Tick period and socket queue sizing (startup-only)",
+          "reload_note": "socket geometry and queue sizing are bound at `Init`"
+        },
+        {
+          "key": "socket_poll_budget_us",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "200",
+          "sample": "250",
+          "contract": "TRG-19",
+          "note": "per-Tick receive time budget (startup-only)",
+          "reload_note": "per-Tick poll budget is bound at `Init`"
+        },
+        {
+          "key": "max_trigger_rate_hz",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "10000",
+          "sample": "20000",
+          "contract": "TRG-19",
+          "note": "maximum trigger-rate sizing input (startup-only)",
+          "reload_note": "socket queue sizing is bound at `Init`"
+        },
+        {
+          "key": "dedup_window_entries",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "1024",
+          "sample": "2048",
+          "contract": "TRG-19",
+          "note": "V4 central dedup capacity (startup-only)",
+          "reload_note": "the dedup cache is allocated at `Init`"
+        },
+        {
+          "key": "dedup_window_ms",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "60000",
+          "sample": "30000",
+          "contract": "TRG-19",
+          "note": "V4 cached-result retention (startup-only)",
+          "reload_note": "the dedup cache is allocated at `Init`"
+        },
+        {
+          "key": "quota_state",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "none",
+          "sample": "/tmp/thyme_schema_quota.state",
+          "contract": "TRG-04",
+          "note": "durable one-hour quota windows; `none` = process-local (startup-only)",
+          "reload_note": "the state file and its exclusive lock are bound at `Init`"
+        },
+        {
+          "key": "default_source",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "source-name",
+          "default": "<unset: unknown sources are rejected>",
+          "sample": "manual",
+          "contract": "TRG-17",
+          "note": "fallback rule for unknown sources",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "allow_empty_sources",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "TRG-17",
+          "note": "allow a center with no `[source.*]`",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "crash_priority",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "int32",
+          "default": "100",
+          "sample": "150",
+          "contract": "TRG-12",
+          "note": "crash-level threshold (hot-reloadable)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "pending_memory_mb",
+          "status": "rejected",
+          "reload": "n/a",
+          "type": "rejected",
+          "default": "—",
+          "sample": "64",
+          "contract": "TRG-17",
+          "note": "removed; use `[recorder].pending_bytes_quota`",
+          "error_match": "pending_memory_mb is removed",
+          "reload_note": "always a parse error"
+        }
+      ]
+    },
+    {
+      "name": "recorder",
+      "keys": [
+        {
+          "key": "output_dir",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "path",
+          "default": "<unset>",
+          "sample": "/var/lib/thyme/pkgs",
+          "contract": "OPS-13",
+          "note": "package root; required by the host",
+          "reload_note": "retention/recorder objects bind the root at Init"
+        },
+        {
+          "key": "socket",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "path",
+          "default": "/tmp/thyme_recorder.sock",
+          "sample": "/tmp/thyme_schema_recorder.sock",
+          "contract": "TRG-15",
+          "note": "continuous-control (Arm/Disarm/Status) socket",
+          "reload_note": "the listening socket is bound at Init"
+        },
+        {
+          "key": "pending_bytes_quota",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "67108864",
+          "sample": "134217728",
+          "contract": "TRG-10",
+          "note": "pending queue byte quota; also sizes the descriptor rings",
+          "reload_note": "recorder rings are sized at Init"
+        },
+        {
+          "key": "flush_policy",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "idle",
+          "sample": "realtime",
+          "contract": "TRG-17",
+          "note": "default for sources without an explicit flush_policy",
+          "reload_note": "drain/recorder objects are constructed once"
+        },
+        {
+          "key": "idle_hold_s",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "30",
+          "sample": "10",
+          "contract": "TRG-17",
+          "note": "vehicle-stationary hold before an idle flush (fractional allowed)",
+          "reload_note": "idle detector is constructed at Init"
+        },
+        {
+          "key": "idle_fallback",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "always_busy",
+          "sample": "assume_idle",
+          "contract": "TRG-17",
+          "note": "behaviour when the chassis mirror is unreadable",
+          "reload_note": "idle detector is constructed at Init"
+        },
+        {
+          "key": "io_rate_limit_mbps",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "20",
+          "sample": "10",
+          "contract": "REC-10",
+          "note": "drain rate limit for idle-flushed captures (decimal MB/s)",
+          "reload_note": "the bucket is created at Init"
+        },
+        {
+          "key": "use_cgroup",
+          "status": "rejected",
+          "reload": "n/a",
+          "type": "rejected",
+          "default": "—",
+          "sample": "true",
+          "contract": "OPS-04",
+          "note": "cgroup v2 io.max is deployment-side; setting it is a parse error",
+          "reload_note": "n/a (parse error)",
+          "error_match": "use_cgroup is deployment-side"
+        },
+        {
+          "key": "disk_quota_mb",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "4096",
+          "contract": "REC-10",
+          "note": "retention disk quota (0 = unlimited)",
+          "reload_note": "retention is constructed at Init"
+        },
+        {
+          "key": "high_reserved_mb",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "1024",
+          "contract": "REC-10",
+          "note": "reserved high-priority zone never reclaimed by low-priority retention",
+          "reload_note": "retention is constructed at Init"
+        },
+        {
+          "key": "incomplete_policy",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "keep",
+          "sample": "delete_after_age",
+          "contract": "REC-10",
+          "note": "retention action for .incomplete packages",
+          "reload_note": "retention is constructed at Init"
+        },
+        {
+          "key": "incomplete_max_age_s",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "86400",
+          "contract": "REC-10",
+          "note": "age threshold for delete_after_age (fractional allowed)",
+          "reload_note": "retention is constructed at Init"
+        }
+      ]
+    },
+    {
+      "name": "logging",
+      "keys": [
+        {
+          "key": "service_file",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "path",
+          "default": "stderr",
+          "sample": "/var/log/thyme/service.log",
+          "contract": "OPS-05",
+          "note": "service log destination; a path enables the file sink",
+          "reload_note": "the sink is opened at Init"
+        },
+        {
+          "key": "service_max_bytes",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "8388608",
+          "sample": "16777216",
+          "contract": "OPS-05",
+          "note": "service log rotation threshold (must be > 0)",
+          "reload_note": "the writer is opened at Init"
+        },
+        {
+          "key": "service_rotate_keep",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "2",
+          "sample": "3",
+          "contract": "OPS-05",
+          "note": "rotated service log generations kept (1..32)",
+          "reload_note": "the writer is opened at Init"
+        },
+        {
+          "key": "fsm_max_bytes",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "4194304",
+          "sample": "8388608",
+          "contract": "OPS-05",
+          "note": "rotation threshold for <socket>.fsm (must be > 0)",
+          "reload_note": "the FSM dump writer is opened at Init"
+        },
+        {
+          "key": "fsm_rotate_keep",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "2",
+          "sample": "3",
+          "contract": "OPS-05",
+          "note": "rotated FSM generations kept (1..32)",
+          "reload_note": "the FSM dump writer is opened at Init"
+        },
+        {
+          "key": "perf_max_bytes",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "67108864",
+          "sample": "134217728",
+          "contract": "OPS-05",
+          "note": "rotation threshold for each PerfLogDumper file (must be > 0)",
+          "reload_note": "host perf writers are opened at Init"
+        },
+        {
+          "key": "perf_rotate_keep",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "2",
+          "sample": "3",
+          "contract": "OPS-05",
+          "note": "rotated perf generations kept (1..32)",
+          "reload_note": "host perf writers are opened at Init"
+        },
+        {
+          "key": "total_budget_mb",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "512",
+          "contract": "OPS-05",
+          "note": "per-process cap over service+audit+FSM+perf; 0 disables the aggregate check",
+          "reload_note": "the budget counter is owned by the open writers"
+        }
+      ]
+    },
+    {
+      "name": "security",
+      "keys": [
+        {
+          "key": "allowed_uids",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "string",
+          "default": "<unset: only the center's euid>",
+          "sample": "1000",
+          "contract": "SEC-02",
+          "note": "comma-separated allowlist; a non-empty list replaces the default",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "allow_root",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "SEC-02",
+          "note": "also accept peer uid 0",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "require_peer_pid",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "bool",
+          "default": "true",
+          "sample": "false",
+          "contract": "SEC-02",
+          "note": "reject datagrams without a kernel-supplied peer pid",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "max_priority_hint",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "int32",
+          "default": "1000",
+          "sample": "500",
+          "contract": "SEC-02",
+          "note": "priority_hint clamp upper bound (may only lower a rule priority)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "allow_legacy_unsequenced",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "SEC-02",
+          "note": "accept 88-byte V1 requests (no replay protection)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "allow_legacy_v2",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "SEC-04",
+          "note": "accept 96-byte V2 requests (no CRC)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "allow_legacy_control",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "SEC-10",
+          "note": "accept V1 recorder text commands (default deny)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "signing_key",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "path",
+          "default": "<unset = unsigned>",
+          "sample": "/etc/thyme/evidence.key",
+          "contract": "SEC-03",
+          "note": "HMAC-SHA256 key for evidence manifests; unreadable key fails closed",
+          "reload_note": "the path is kept; the next seal reads the file contents"
+        },
+        {
+          "key": "manifest",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "full",
+          "sample": "metadata",
+          "contract": "REC-23",
+          "note": "evidence scope: full/metadata/off",
+          "reload_note": "recorder integrity mode is bound at Init"
+        },
+        {
+          "key": "audit_log",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "path",
+          "default": "<trigger socket>.audit",
+          "sample": "/tmp/schema_audit.log",
+          "contract": "SEC-02",
+          "note": "append-only trigger audit path; must differ from both sockets",
+          "reload_note": "the audit file is open; a change warns and keeps the path"
+        },
+        {
+          "key": "control_audit_log",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "path",
+          "default": "<recorder socket>.audit",
+          "sample": "/tmp/schema_control_audit.log",
+          "contract": "SEC-10",
+          "note": "recorder-control audit path, independent of audit_log",
+          "reload_note": "the audit file is open; a change keeps the running path"
+        },
+        {
+          "key": "audit_max_bytes",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "uint64",
+          "default": "4194304",
+          "sample": "8388608",
+          "contract": "SEC-02",
+          "note": "audit rotation threshold (must be > 0)",
+          "reload_note": "rotation geometry is fixed at Init"
+        },
+        {
+          "key": "audit_rotate_keep",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "uint32",
+          "default": "2",
+          "sample": "3",
+          "contract": "SEC-02",
+          "note": "rotated audit generations kept (1..32)",
+          "reload_note": "rotation geometry is fixed at Init"
+        },
+        {
+          "key": "audit_fsync_interval_s",
+          "status": "implemented",
+          "reload": "startup-kept",
+          "type": "uint64",
+          "default": "0",
+          "sample": "5",
+          "contract": "SEC-02",
+          "note": "0 = fdatasync only at shutdown; otherwise at most once per interval",
+          "reload_note": "the sync cadence is fixed at Init"
+        }
+      ]
+    },
+    {
+      "name": "continuous",
+      "keys": [
+        {
+          "key": "auto_arm",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "TRG-10",
+          "note": "arm continuous capture at startup; does not affect manual Arm",
+          "reload_note": "continuous session state is bound at Init"
+        },
+        {
+          "key": "channels",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "string",
+          "default": "<unset: all small structs>",
+          "sample": "small_struct:*",
+          "contract": "TRG-16",
+          "note": "continuous channel selector grammar",
+          "reload_note": "the recorder continuous plan is built at Init"
+        },
+        {
+          "key": "slice_mb",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "512",
+          "sample": "256",
+          "contract": "TRG-10",
+          "note": "slice size; must be > 0 and <= disk_quota_mb when set",
+          "reload_note": "slice geometry is bound at Init"
+        },
+        {
+          "key": "slice_s",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "60",
+          "contract": "TRG-10",
+          "note": "time-based roll; 0 = size only",
+          "reload_note": "slice geometry is bound at Init"
+        },
+        {
+          "key": "wait_idle",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "TRG-17",
+          "note": "gate continuous drain on the idle detector",
+          "reload_note": "the drain policy is bound at Init"
+        },
+        {
+          "key": "demo_idle",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "TRG-17",
+          "note": "explicit demo idle predicate when no [chassis] exists",
+          "reload_note": "the drain policy is bound at Init"
+        },
+        {
+          "key": "rate_check",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "warn",
+          "sample": "enforce",
+          "contract": "TRG-10",
+          "note": "enforce/warn/off; runs on every Arm and --check-config",
+          "reload_note": "the continuous plan is bound at Init"
+        },
+        {
+          "key": "enable",
+          "status": "deprecated",
+          "reload": "restart",
+          "type": "bool",
+          "default": "false",
+          "sample": "true",
+          "contract": "TRG-17",
+          "note": "old spelling of auto_arm; accepted with a deprecation warning",
+          "reload_note": "it changes auto_arm, which requires restart"
+        }
+      ]
+    },
+    {
+      "name": "chassis",
+      "keys": [
+        {
+          "key": "page_shm",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "path",
+          "default": "<unset: no chassis predicate>",
+          "sample": "/thyme_chassis_rec",
+          "contract": "TRG-10",
+          "note": "record-mirror page shm name for the chassis mirror",
+          "reload_note": "the chassis predicate attaches at Init"
+        },
+        {
+          "key": "struct_id",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "0",
+          "sample": "1",
+          "contract": "TRG-10",
+          "note": "struct id inside the chassis mirror page",
+          "reload_note": "the chassis predicate attaches at Init"
+        },
+        {
+          "key": "epb_offset",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "0",
+          "sample": "8",
+          "contract": "TRG-10",
+          "note": "uint8 park-brake status offset (!=0 means engaged)",
+          "reload_note": "the chassis predicate attaches at Init"
+        },
+        {
+          "key": "speed_offset",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "4",
+          "sample": "12",
+          "contract": "TRG-10",
+          "note": "float vehicle-speed offset (m/s)",
+          "reload_note": "the chassis predicate attaches at Init"
+        },
+        {
+          "key": "speed_threshold",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "string",
+          "default": "0.1",
+          "sample": "0.2",
+          "contract": "TRG-10",
+          "note": "speed threshold below which the vehicle is considered stationary",
+          "reload_note": "the chassis predicate attaches at Init"
+        }
+      ]
+    },
+    {
+      "name": "quota.*",
+      "keys": [
+        {
+          "key": "max_triggers_per_hour",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "uint64",
+          "default": "0",
+          "sample": "100",
+          "contract": "TRG-04",
+          "note": "sliding one-hour trigger budget; 0 = unlimited",
+          "reload_note": "quota policy reload"
+        }
+      ]
+    },
+    {
+      "name": "source.*",
+      "keys": [
+        {
+          "key": "channels",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "string",
+          "default": "<unset: all channels>",
+          "sample": "/demo",
+          "contract": "TRG-16",
+          "note": "per-source channel selector list (glob/exclusion/decimate grammar)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "before_s",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "uint64",
+          "default": "0",
+          "sample": "2",
+          "contract": "TRG-10",
+          "note": "pre-roll (fractions allowed)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "after_s",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "uint64",
+          "default": "0",
+          "sample": "3",
+          "contract": "TRG-10",
+          "note": "post-roll (fractions allowed)",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "priority",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "int32",
+          "default": "0",
+          "sample": "5",
+          "contract": "TRG-12",
+          "note": "base priority; a submitter hint may only lower it",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "mute_s",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "uint64",
+          "default": "0",
+          "sample": "10",
+          "contract": "TRG-10",
+          "note": "mute window after the capture completes",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "flush_policy",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "enum",
+          "default": "<inherit [recorder].flush_policy>",
+          "sample": "realtime",
+          "contract": "TRG-17",
+          "note": "idle or realtime; an explicit value overrides [recorder]",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "quota_class",
+          "status": "implemented",
+          "reload": "hot",
+          "type": "string",
+          "default": "<required: must match a [quota.*] class>",
+          "sample": "manual",
+          "contract": "TRG-04",
+          "note": "quota class; must exist at center start",
+          "reload_note": "policy reload"
+        },
+        {
+          "key": "name",
+          "status": "rejected",
+          "reload": "n/a",
+          "type": "rejected",
+          "default": "—",
+          "sample": "demo",
+          "contract": "TRG-17",
+          "note": "the name comes from the [source.<name>] section header",
+          "reload_note": "n/a (parse error)",
+          "error_match": "name comes from the [source.<name>] header"
+        }
+      ]
+    },
+    {
+      "name": "channel.*",
+      "keys": [
+        {
+          "key": "kind",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "mirror_ring",
+          "sample": "pinned_slot",
+          "contract": "REC-19",
+          "note": "mirror_ring (small structs), pinned_slot, h264_stream",
+          "reload_note": "recorder sources are built at Init"
+        },
+        {
+          "key": "name",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "string",
+          "default": "<shm name>",
+          "sample": "demo",
+          "contract": "TRG-16",
+          "note": "addressable channel name used by source/continuous selectors",
+          "reload_note": "recorder sources are built at Init"
+        },
+        {
+          "key": "record_channels",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "string",
+          "default": "<unset: generated aggregate>",
+          "sample": "demo",
+          "contract": "GEN-12",
+          "note": "record-manifest structs aggregated into one mirror source (normally generated)",
+          "reload_note": "record registry is built at Init"
+        },
+        {
+          "key": "rate_hz",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "10",
+          "contract": "TRG-10",
+          "note": "nominal sample rate for continuous rate accounting",
+          "reload_note": "the continuous plan is built at Init"
+        },
+        {
+          "key": "avg_frame_bytes",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "128",
+          "contract": "TRG-10",
+          "note": "average payload for continuous rate accounting",
+          "reload_note": "the continuous plan is built at Init"
+        },
+        {
+          "key": "bitrate_kbps",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "4096",
+          "contract": "TRG-10",
+          "note": "encoded bitrate for h264_stream rate accounting",
+          "reload_note": "the continuous plan is built at Init"
+        },
+        {
+          "key": "crc",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "<kind default>",
+          "sample": "off",
+          "contract": "REC-21",
+          "note": "package/frame/off per-channel CRC policy",
+          "reload_note": "the recorder plan is built at Init"
+        },
+        {
+          "key": "manifest",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "enum",
+          "default": "<inherit [security]>",
+          "sample": "full",
+          "contract": "REC-23",
+          "note": "bulk .raw override: full/metadata/off",
+          "reload_note": "the recorder plan is built at Init"
+        },
+        {
+          "key": "profile",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "string",
+          "default": "none",
+          "sample": "inno-lidar/pointcloud@v2",
+          "contract": "REC-27",
+          "note": "opaque big-frame payload decoder id; none = unset; mirror_ring rejects",
+          "reload_note": "the recorder plan is built at Init"
+        },
+        {
+          "key": "profile_version",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint32",
+          "default": "0",
+          "sample": "1",
+          "contract": "REC-27",
+          "note": "payload profile version; requires profile",
+          "reload_note": "the recorder plan is built at Init"
+        },
+        {
+          "key": "profile_params",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "string",
+          "default": "none",
+          "sample": "time_field=offset:0",
+          "contract": "REC-27",
+          "note": "opaque parameter string hashed into params_digest; none = empty",
+          "reload_note": "the recorder plan is built at Init"
+        },
+        {
+          "key": "gop_s",
+          "status": "implemented",
+          "reload": "restart",
+          "type": "uint64",
+          "default": "0",
+          "sample": "2",
+          "contract": "OPS-13",
+          "note": "h264 trigger window IDR slack in seconds; 0 disables; 1..60 only on h264_stream",
+          "reload_note": "the recorder plan is built at Init"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# channel|cpp_type|pool — editor-facing defaults (gen_graph does not read this file)
+aa|Foo|FooPool
+bb|Bar|BarPool
+out|Baz|BazPool

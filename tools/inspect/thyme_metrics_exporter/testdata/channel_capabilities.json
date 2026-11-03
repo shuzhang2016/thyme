@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hash": "0x0123456789abcdef",
+  "channels": [
+    {"channel":"control","from":"planner","to":"control","shm":"thyme_control","transport_kind":"frame","retention":"queue","readers":"many","overflow":"overwrite","recordable":false,"replay_gate":false,"lease_required":false,"hub_required":false,"max_wire_bytes":64,"slot_count":16},
+    {"channel":"can","from":"can","to":"recorder","shm":"thyme_recr_can","transport_kind":"frame","retention":"queue","readers":"one","overflow":"reject","recordable":true,"replay_gate":false,"lease_required":false,"hub_required":false,"max_wire_bytes":64,"slot_count":1024},
+    {"channel":"h264","from":"camera","to":"recorder","shm":"h264_front","transport_kind":"pinned_slot","retention":"queue","readers":"many","overflow":"drop","recordable":true,"replay_gate":true,"lease_required":true,"hub_required":false,"max_wire_bytes":1966080,"slot_count":8},
+    {"channel":"h264_zero","from":"camera","to":"replay","shm":"h264_zero","transport_kind":"pinned_slot","retention":"queue","readers":"one","overflow":"drop","recordable":false,"replay_gate":true,"lease_required":true,"hub_required":false,"max_wire_bytes":1966080,"slot_count":8},
+    {"channel":"local_latest","from":"planner","to":"estimator","shm":"","transport_kind":"frame","retention":"latest","readers":"one","overflow":"overwrite","recordable":false,"replay_gate":false,"lease_required":false,"hub_required":false,"max_wire_bytes":0,"slot_count":0}
+  ]
+}

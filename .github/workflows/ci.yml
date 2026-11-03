@@ -1,0 +1,465 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+jobs:
+  test-mr-gate:
+    name: Merge gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+      - name: Documentation checks
+        run: |
+          python3 tools/ci/check_doc_links.py
+          python3 tools/ci/check_doc_commands.py --build-dir build
+      - name: CTest merge gate
+        run: ctest --test-dir build -L mr_gate --output-on-failure
+
+  test-linux:
+    name: Full Linux test suite
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+      - name: CTest
+        run: ctest --test-dir build --output-on-failure
+
+  check-clang-tidy:
+    name: clang-tidy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 clang-tidy-14 ccache
+      - name: Configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+      - name: Run clang-tidy
+        run: |
+          python3 tools/ci/run_clang_tidy.py --build-dir build \
+            --clang-tidy clang-tidy-14 -j 2
+
+  test-werror:
+    name: -Werror build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 ccache
+      - name: Configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DTHYME_STRICT_WARNINGS=ON -DTHYME_WERROR=ON
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+  test-asan-ubsan-mr:
+    name: ASan/UBSan merge gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 ccache
+      - name: Configure
+        run: |
+          cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build
+        run: cmake --build build-asan -j"$(nproc)"
+      - name: Run sanitizer subset
+        run: |
+          ctest --test-dir build-asan --output-on-failure \
+            -R 'frame|spsc|latest_slot|pinned_slot|record_mirror|queue|object_pool|seqlock'
+
+  nightly-ctest:
+    name: Nightly full CTest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+      - name: CTest (excluding quarantined tests)
+        run: |
+          QUAR_EXCLUDE="$(python3 tools/ci/apply_quarantine.py --exclude-regex --tests <(ctest --test-dir build -N))"
+          ctest --test-dir build --output-on-failure -E "${QUAR_EXCLUDE}"
+
+  nightly-asan-ubsan:
+    name: Nightly ASan/UBSan
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure
+        run: |
+          cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build
+        run: cmake --build build-asan -j"$(nproc)"
+      - name: Run the full suite under sanitizers
+        run: |
+          EXCL='test_gen_graph|test_empty_app|test_wake_coalesce'
+          QUAR_EXCLUDE="$(python3 tools/ci/apply_quarantine.py --exclude-regex --tests <(ctest --test-dir build-asan -N))"
+          if [ -n "${QUAR_EXCLUDE}" ]; then EXCL="${EXCL}|${QUAR_EXCLUDE}"; fi
+          ctest --test-dir build-asan --output-on-failure -E "${EXCL}"
+
+  nightly-aarch64-cross:
+    name: Nightly AArch64 cross
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    env:
+      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu qemu-user-static
+      - name: Configure
+        run: |
+          cmake -S . -B build-aarch64 -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake
+      - name: Build
+        run: cmake --build build-aarch64 -j"$(nproc)"
+      - name: Run architecture-sensitive tests
+        run: |
+          ctest --test-dir build-aarch64 --output-on-failure \
+            -R '^(test_abi_layout|test_abi_profile|test_abi_cross_version|test_cacheline_audit|test_frame_header|test_crc32_hw)$'
+
+  nightly-fuzz:
+    name: Nightly fuzz
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 clang ccache
+      - name: Configure
+        run: |
+          cmake -S . -B build-fuzz -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++ -DTHYME_ENABLE_FUZZ=ON
+      - name: Build
+        run: cmake --build build-fuzz -j"$(nproc)"
+      - name: Run libFuzzer
+        env:
+          FUZZ_MAX_SECONDS: 300
+        run: tools/gen/gen_graph/fuzz/run_nightly.sh build-fuzz
+
+  perf-eval-chains:
+    name: Performance eval chains
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 ccache
+      - name: Build generator
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)" --target gen_graph
+      - name: Build eval_chains fixture
+        run: |
+          tools/ci/eval_chains_build.sh \
+            --gen-graph build/tools/gen/gen_graph/gen_graph \
+            --thyme . --out build-eval-chains
+      - name: Run scenarios
+        run: |
+          mkdir -p bench-report
+          python3 tools/ci/run_eval_chains.py \
+            --eval-chains build-eval-chains/build/eval_chains \
+            --out bench-report/eval-chains.json \
+            --raw-dir bench-report/raw \
+            --runner-tag "github-ubuntu-22.04" \
+            --git-sha "${GITHUB_SHA}"
+      - name: Evaluate gate
+        run: |
+          python3 tools/ci/check_eval_chains.py \
+            --run bench-report/eval-chains.json
+
+  nightly-bench:
+    name: Nightly bench
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    env:
+      THYME_BENCH_RUNNER_TAG: x86_64-ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 ccache
+      - name: Build benchmarks
+        run: |
+          cmake -S . -B build-bench -DCMAKE_BUILD_TYPE=Release -DTHYME_WERROR=ON
+          cmake --build build-bench -j"$(nproc)" \
+            --target bench_core bench_object_pool bench_trigger_seal
+      - name: Run benchmarks
+        run: |
+          mkdir -p bench-report
+          ./build-bench/bench_core \
+            --json bench-report/bench_core.json --tag "${THYME_BENCH_RUNNER_TAG}"
+          ./build-bench/bench_object_pool \
+            --json bench-report/bench_object_pool.json --tag "${THYME_BENCH_RUNNER_TAG}"
+          ./build-bench/bench_trigger_seal --iters 200 \
+            --json bench-report/bench_trigger_seal.json --tag "${THYME_BENCH_RUNNER_TAG}"
+      - name: Evaluate bench gate
+        run: |
+          python3 tools/ci/check_bench.py \
+            --run bench-report/bench_core.json \
+            --run bench-report/bench_object_pool.json \
+            --run bench-report/bench_trigger_seal.json \
+            --tolerance-p99 25 --tolerance-p999 25 \
+            --json-out bench-report/bench-gate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-report
+          path: bench-report/
+          if-no-files-found: ignore
+
+  check-doc-links:
+    name: Documentation links and commands
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3
+      - name: Check docs
+        run: |
+          python3 tools/ci/check_doc_links.py
+          python3 tools/ci/check_doc_commands.py --no-counts
+          python3 tools/ci/check_abi_matrix.py
+
+  check-license-inventory:
+    name: License inventory
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check NOTICE, LICENSE, and vendored directories
+        run: tools/ci/check_license_inventory.sh
+
+  check-sbom:
+    name: SBOM
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3
+      - name: Generate SBOM
+        run: |
+          tools/ci/gen_sbom.sh --output sbom.json
+          python3 -m json.tool sbom.json > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+
+  nightly-repeat:
+    name: Nightly repeated gate
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+      - name: Repeat the merge gate
+        run: |
+          mkdir -p repeat-report
+          EXCL='test_gen_graph|test_empty_app|bench_|test_trigger_seal|test_fuzz_'
+          QUAR_EXCLUDE="$(python3 tools/ci/apply_quarantine.py --exclude-regex --tests <(ctest --test-dir build -N))"
+          if [ -n "${QUAR_EXCLUDE}" ]; then EXCL="${EXCL}|${QUAR_EXCLUDE}"; fi
+          ctest --test-dir build -L mr_gate -E "${EXCL}" \
+            --repeat until-fail:20 --output-on-failure -j2 2>&1 \
+            | tee repeat-report/ctest-repeat.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: repeat-report
+          path: repeat-report/
+          if-no-files-found: ignore
+
+  nightly-quarantine:
+    name: Nightly quarantine
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+      - name: Run quarantined tests
+        run: |
+          QUAR_ONLY="$(python3 tools/ci/apply_quarantine.py --only-regex --tests <(ctest --test-dir build -N))"
+          if [ -n "${QUAR_ONLY}" ]; then
+            ctest --test-dir build -R "${QUAR_ONLY}" --output-on-failure --repeat until-fail:3
+          else
+            echo "quarantine registry has no active entries; nothing to run"
+          fi
+
+  nightly-fault:
+    name: Nightly fault matrix
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Configure and build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+      - name: Run fault matrix
+        run: ctest --test-dir build -L fault --output-on-failure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fault-matrix
+          path: build/fault_matrix.json
+          if-no-files-found: ignore
+
+  nightly-coverage:
+    name: Nightly coverage
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang cmake git lcov llvm python3 python3-yaml
+      - name: Run instrumented suite and coverage gate
+        run: bash tools/ops/coverage/run_nightly.sh build-cov coverage-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage-report/
+          if-no-files-found: ignore
+
+  report-acceptance:
+    name: Acceptance report
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake python3 python3-yaml ccache
+      - name: Build and test
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+          ctest --test-dir build --output-on-failure \
+            --output-junit build/ctest-junit.xml
+      - name: Render acceptance report
+        run: |
+          python3 tools/ci/gen_acceptance.py \
+            --build-dir build \
+            --junit build/ctest-junit.xml \
+            --out acceptance.md \
+            --json-out acceptance.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acceptance-report
+          path: |
+            acceptance.md
+            acceptance.json
+          if-no-files-found: ignore

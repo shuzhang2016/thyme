@@ -1,0 +1,86 @@
+{
+  "configById": {
+    "StateTransitions!thyme-trigger": {
+      "paths": [
+        {
+          "value": "thyme/trigger.event",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showLegend": true
+    },
+    "StateTransitions!thyme-session": {
+      "paths": [
+        {
+          "value": "thyme/session.event",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showLegend": true
+    },
+    "Plot!thyme-roll": {
+      "paths": [
+        {
+          "value": "thyme/trigger.pre_roll_ns",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "thyme/trigger.post_roll_ns",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showXAxisLabels": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 20,
+      "showLegend": true,
+      "legendPosition": "left",
+      "isSynced": true
+    },
+    "Plot!thyme-gap": {
+      "paths": [
+        {
+          "value": "thyme/gap.missed_count",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
+      ],
+      "showXAxisLabels": true,
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 20,
+      "showLegend": true,
+      "legendPosition": "left",
+      "isSynced": true
+    },
+    "RawMessages!thyme-gap": {
+      "topicPath": "thyme/gap",
+      "diffEnabled": false,
+      "diffMethod": "custom"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "StateTransitions!thyme-trigger",
+      "second": "StateTransitions!thyme-session",
+      "direction": "column"
+    },
+    "second": {
+      "first": "Plot!thyme-roll",
+      "second": {
+        "first": "Plot!thyme-gap",
+        "second": "RawMessages!thyme-gap",
+        "direction": "row"
+      },
+      "direction": "column"
+    },
+    "direction": "row"
+  }
+}

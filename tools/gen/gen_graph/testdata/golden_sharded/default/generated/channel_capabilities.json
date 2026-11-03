@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hash": "0xcf6971a0f0b13ea5",
+  "channels": [
+    {"channel": "c0", "from": "prod", "to": "sink__s0", "shm": "", "transport_kind": "frame", "retention": "queue", "readers": "one", "overflow": "drop", "recordable": true, "replay_gate": false, "lease_required": false, "hub_required": false, "max_wire_bytes": 0, "slot_count": 0},
+    {"channel": "c1", "from": "prod", "to": "sink__s1", "shm": "", "transport_kind": "frame", "retention": "queue", "readers": "one", "overflow": "drop", "recordable": true, "replay_gate": false, "lease_required": false, "hub_required": false, "max_wire_bytes": 0, "slot_count": 0},
+    {"channel": "c2", "from": "prod", "to": "sink__s0", "shm": "", "transport_kind": "frame", "retention": "queue", "readers": "one", "overflow": "drop", "recordable": true, "replay_gate": false, "lease_required": false, "hub_required": false, "max_wire_bytes": 0, "slot_count": 0},
+    {"channel": "c3", "from": "prod", "to": "sink__s1", "shm": "", "transport_kind": "frame", "retention": "queue", "readers": "one", "overflow": "drop", "recordable": true, "replay_gate": false, "lease_required": false, "hub_required": false, "max_wire_bytes": 0, "slot_count": 0}
+  ]
+}

@@ -1,0 +1,40 @@
+if(NOT GEN OR NOT THYME)
+  message(FATAL_ERROR "GEN and THYME required")
+endif()
+get_filename_component(THYME_ABS "${THYME}" ABSOLUTE)
+set(ROOT "${CMAKE_BINARY_DIR}/empty_app")
+set(BUILD "${ROOT}/build")
+file(REMOVE_RECURSE "${ROOT}")
+execute_process(COMMAND "${GEN}" --out "${ROOT}" --update all
+  --no-health-reporter RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "gen_graph --update all failed: ${rc}")
+endif()
+
+# GEN-08: the always-emitted graph_check.h carries the graph-level layout
+# asserts (ring cap / pool cardinality / health table ceiling). The build below
+# evaluates them; the greps keep the test honest if the emitter regresses.
+function(expect_contains file needle)
+  file(READ "${file}" body)
+  string(FIND "${body}" "${needle}" pos)
+  if(pos EQUAL -1)
+    message(FATAL_ERROR "empty_app: ${file} missing: ${needle}")
+  endif()
+endfunction()
+expect_contains("${ROOT}/generated/graph_check.h" "ring_cap must be a power of two")
+expect_contains("${ROOT}/generated/graph_check.h" "pool_n must be > 0")
+expect_contains("${ROOT}/generated/graph_check.h" "kAbiMaxThreads")
+execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
+  -DTHYME_SOURCE_DIR=${THYME_ABS} RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "cmake configure failed")
+endif()
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 4
+  RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "build failed")
+endif()
+execute_process(COMMAND "${BUILD}/app" RESULT_VARIABLE rc)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "app exited ${rc}")
+endif()

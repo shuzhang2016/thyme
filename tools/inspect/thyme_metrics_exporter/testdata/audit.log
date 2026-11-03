@@ -1,0 +1,4 @@
+ts=2026-10-24T09:12:33.123456789Z ts_ns=1761297153123456789 mono_ns=184000000000 pid=4242 uid=1000 req=trigger proto=3 seq=1761297153123456000 src=manual hint_raw=80 hint_eff=50 clamp=1 decision=accepted reason=ok code=accepted trigger_id=7 quota_override=0 by=0
+ts=2026-10-24T09:12:34.000000001Z ts_ns=1761297154000000001 mono_ns=184700000000 pid=4243 uid=1000 req=trigger proto=3 seq=1761297154000000000 src=can hint_raw=10 hint_eff=10 clamp=0 decision=rejected reason=muted code=muted trigger_id=0 quota_override=0 by=0
+ts=2026-10-24T09:12:35.000000002Z ts_ns=1761297155000000002 mono_ns=185700000000 pid=4244 uid=1000 req=preempt proto=3 seq=1761297155000000000 src=can hint_raw=900 hint_eff=900 clamp=0 decision=preempted reason=preempted_by_higher code=preempted_by_higher trigger_id=8 quota_override=0 by=9
+malformed audit tail from a crash without a trailing newline

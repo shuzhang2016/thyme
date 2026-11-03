@@ -1,0 +1,44 @@
+# OBS-10 perf fixture: a three-node chain with one SPSC hop per edge.
+# eval_chains reports per-node work/latency and the frame-joined E2E latency
+# under the baseline/cpu/io/irq loads. Distinct pools and rings keep the two
+# hops independent, so the frame join can attribute every hop unambiguously.
+# mid/tail loop at twice the upstream frame rate so a transient backlog is
+# drained instead of accumulating for the rest of the run; gen_graph emits a
+# report-only RATE_WARN for that deliberate mismatch.
+version: 1
+pool_n: 256
+ring_cap: 256
+nodes:
+  - id: head
+    type: head
+    hz: 200
+    process: main
+  - id: mid
+    type: mid
+    hz: 400
+    process: main
+  - id: tail
+    type: tail
+    hz: 400
+    process: main
+edges:
+  - from: head
+    to: mid
+    channel: hop1
+    cpp_type: Reading
+    pool: Hop1Pool
+    transport: spsc
+    record_priority: p1
+  - from: mid
+    to: tail
+    channel: hop2
+    cpp_type: Reading
+    pool: Hop2Pool
+    transport: spsc
+    record_priority: p1
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

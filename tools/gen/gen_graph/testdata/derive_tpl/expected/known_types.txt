@@ -1,0 +1,5 @@
+source_a|SourceAThread|source_a|foo_queue, {health}|
+source_b|SourceBThread|source_b|bar_queue, {health}|
+fusion|FusionThread|fusion|foo_queue, bar_queue, baz_pool, baz_pipe, {health}|
+sink|SinkThread|sink|baz_pool, baz_pipe, {health}|
+health_reporter|HealthReporterThread|reporter|HEALTH|noworker

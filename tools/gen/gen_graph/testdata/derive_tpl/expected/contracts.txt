@@ -1,0 +1,8 @@
+source_a|aa|1
+fusion|aa|0
+source_b|bb|1
+fusion|bb|0
+fusion|out|1
+sink|out|0
+fusion|ev|1
+relay|ev|0

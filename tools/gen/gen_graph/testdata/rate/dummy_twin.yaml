@@ -1,0 +1,277 @@
+version: 1
+pool_n: 16
+ring_cap: 8
+
+nodes:
+  - id: perception
+    type: perception
+    hz: 10
+    process: perception
+    cpu_set: [1]
+    sched_policy: fifo
+    priority: 40
+  - id: fusion
+    type: fusion
+    hz: 21
+    process: rest
+    cpu_set: [2]
+    sched_policy: fifo
+    priority: 40
+  - id: decision
+    type: decision
+    hz: 20
+    process: rest
+    cpu_set: [2]
+    sched_policy: fifo
+    priority: 30
+    wait_inputs: period
+  - id: planning
+    type: planning
+    hz: 20
+    process: rest
+    cpu_set: [2]
+    sched_policy: fifo
+    priority: 20
+    wait_inputs: period
+  # Event-driven twin chain: parallel to the cyclic chain in graph.yaml.
+  # Same fusion frames, one message in -> one message out, no latest-overwrite.
+  # Used by test_ev_chain_compare only.
+  - id: decision_ev
+    type: decision
+    hz: 30
+    process: rest
+    exec: event
+    cpu_set: [2]
+    sched_policy: fifo
+    priority: 30
+  - id: planning_ev
+    type: planning
+    hz: 30
+    process: rest
+    exec: event
+    cpu_set: [2]
+    sched_policy: fifo
+    priority: 20
+  - id: arcomm_ev
+    type: arcomm
+    hz: 20
+    process: rest
+    exec: event
+    cpu_set: [3]
+    sched_policy: fifo
+    priority: 50
+  # Cross-process event consumer: drains perception's shm outputs as
+  # full-delivery queue channels (ShmSpscRing + shared wake word).
+  - id: fusion_ev
+    type: fusion
+    hz: 40
+    process: rest
+    exec: event
+    cpu_set: [2]
+    sched_policy: fifo
+    priority: 40
+  - id: arcomm
+    type: arcomm
+    hz: 50
+    process: rest
+    cpu_set: [3]
+    sched_policy: fifo
+    priority: 50
+  - id: health_reporter
+    type: health_reporter
+    hz: 10
+    process: rest
+    cpu_set: [0]
+    sched_policy: fifo
+    priority: 10
+
+edges:
+  - from: perception
+    to: fusion
+    channel: obstacle
+    cpp_type: J3Obstacle
+    pool: ObstaclePool
+    transport: spsc
+    shm: _ob
+    delivery: latest
+  - from: perception
+    to: fusion
+    channel: lane
+    cpp_type: J3Lane
+    pool: LanePool
+    transport: spsc
+    shm: _ln
+    delivery: latest
+  - from: perception
+    to: fusion
+    channel: radar
+    cpp_type: RadarObstacleArray
+    pool: RadarPool
+    transport: spsc
+    shm: _rd
+    delivery: latest
+  - from: perception
+    to: fusion
+    channel: j3sync
+    cpp_type: J3Sync
+    pool: J3SyncPool
+    transport: spsc
+    shm: _sy
+    delivery: latest
+  - from: fusion
+    to: decision
+    channel: object_list
+    cpp_type: ObjectList
+    pool: ObjectListPool
+    transport: spsc
+    delivery: latest
+  - from: fusion
+    to: decision
+    channel: road_model
+    cpp_type: RoadModel
+    pool: RoadModelPool
+    transport: spsc
+    delivery: latest
+  - from: fusion
+    to: decision
+    channel: ego_motion
+    cpp_type: EgoMotion
+    pool: EgoMotionPool
+    transport: spsc
+    delivery: latest
+  - from: decision
+    to: planning
+    channel: interest_target
+    cpp_type: InterestTarget
+    pool: InterestTargetPool
+    transport: spsc
+    delivery: latest
+  - from: decision
+    to: planning
+    channel: safety_decision
+    cpp_type: SafetyDecision
+    pool: SafetyDecisionPool
+    transport: spsc
+    delivery: latest
+    record_priority: p0
+  - from: decision
+    to: planning
+    channel: state_machine
+    cpp_type: StateMachineStatus
+    pool: StateMachinePool
+    transport: spsc
+    delivery: latest
+  - from: planning
+    to: arcomm
+    channel: can_out_long
+    cpp_type: CanOutLongCtrl
+    pool: CanOutLongPool
+    transport: spsc
+    delivery: latest
+    record_priority: p0
+  - from: planning
+    to: arcomm
+    channel: can_out_lat
+    cpp_type: CanOutLatCtrl
+    pool: CanOutLatPool
+    transport: spsc
+    delivery: latest
+    record_priority: p0
+  # Event chain fork: fusion pushes every frame into these full-delivery pipes
+  # in addition to the cyclic pool/ring publish (same input on both chains).
+  # Edges into exec=event nodes carry no pool: the transport is a NotifPipe.
+  # Appended last so the cyclic chain's record slots keep their numbering.
+  - from: fusion
+    to: decision_ev
+    channel: object_list_ev
+    cpp_type: ObjectList
+    transport: spsc
+    delivery: notify
+  - from: fusion
+    to: decision_ev
+    channel: road_model_ev
+    cpp_type: RoadModel
+    transport: spsc
+    delivery: notify
+  - from: fusion
+    to: decision_ev
+    channel: ego_motion_ev
+    cpp_type: EgoMotion
+    transport: spsc
+    delivery: notify
+  - from: decision_ev
+    to: planning_ev
+    channel: interest_target_ev
+    cpp_type: InterestTarget
+    transport: spsc
+    delivery: notify
+  - from: decision_ev
+    to: planning_ev
+    channel: safety_decision_ev
+    cpp_type: SafetyDecision
+    transport: spsc
+    delivery: notify
+    record_priority: p0
+  - from: decision_ev
+    to: planning_ev
+    channel: state_machine_ev
+    cpp_type: StateMachineStatus
+    transport: spsc
+    delivery: notify
+  - from: planning_ev
+    to: arcomm_ev
+    channel: can_out_long_ev
+    cpp_type: CanOutLongCtrl
+    transport: spsc
+    delivery: notify
+    record_priority: p0
+  - from: planning_ev
+    to: arcomm_ev
+    channel: can_out_lat_ev
+    cpp_type: CanOutLatCtrl
+    transport: spsc
+    delivery: notify
+    record_priority: p0
+
+  - from: perception
+    to: fusion_ev
+    channel: obstacle_q
+    cpp_type: J3Obstacle
+    transport: spsc
+    shm: _obq
+    delivery: queue
+    record_priority: p0
+  - from: perception
+    to: fusion_ev
+    channel: lane_q
+    cpp_type: J3Lane
+    transport: spsc
+    shm: _lnq
+    delivery: queue
+    record_priority: p0
+  - from: perception
+    to: fusion_ev
+    channel: radar_q
+    cpp_type: RadarObstacleArray
+    transport: spsc
+    shm: _rdq
+    delivery: queue
+    record_priority: p0
+  - from: perception
+    to: fusion_ev
+    channel: j3sync_q
+    cpp_type: J3Sync
+    transport: spsc
+    shm: _syq
+    delivery: queue
+    record_priority: p0
+
+processes:
+  - id: perception
+    role: perception
+  - id: rest
+    role: rest
+
+supervisor:
+  shm_prefix: /c9_%pid
+  health_n: 10

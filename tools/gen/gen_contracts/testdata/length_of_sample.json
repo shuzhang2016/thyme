@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "namespace": "abi14",
+  "frame_magic": "TSTH",
+  "frame_version": 7,
+  "types": [
+    {
+      "name": "Target_t",
+      "fields": [
+        { "name": "id", "type": "uint32" }
+      ]
+    },
+    {
+      "name": "Packet_t",
+      "fields": [
+        { "name": "n", "type": "uint32" },
+        { "name": "targets", "type": "Target_t", "count": 4, "length_of": "n" }
+      ]
+    },
+    {
+      "name": "Signed32Packet_t",
+      "fields": [
+        { "name": "n", "type": "int32" },
+        { "name": "targets", "type": "Target_t", "count": 4, "length_of": "n" }
+      ]
+    },
+    {
+      "name": "Signed64Packet_t",
+      "fields": [
+        { "name": "n", "type": "int64" },
+        { "name": "targets", "type": "Target_t", "count": 4, "length_of": "n" }
+      ]
+    }
+  ]
+}

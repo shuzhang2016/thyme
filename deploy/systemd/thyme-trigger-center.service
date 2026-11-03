@@ -1,0 +1,126 @@
+# OPS-11: trigger center (triggered-acquisition FSM + recorder) as a systemd
+# service, ordered after the producers that create its SHM inputs.
+#
+# Start-up gates, in order:
+#   1. output directory exists and is owned by the service account;
+#   2. `--check-config`  parses the file and validates the continuous plan;
+#   3. `--check-resources` applies the OPS-07 host-capacity gate
+#      (RLIMIT_NOFILE, /dev/shm, output disk) without starting anything;
+#   4. the recorder attaches every configured source and both sockets bind;
+#   5. READY=1 is sent       -> systemd marks the unit active.
+#
+# Steps 2-4 fail the start. Step 5 requires THYME_SD_NOTIFY=1 and a
+# NOTIFY_SOCKET (set below); without them the shim is a no-op and Type=notify
+# would wait for TimeoutStartSec. A deployment that runs this binary without
+# the notify shim must use a drop-in with `Type=simple` and `WatchdogSec=0`.
+#
+# The main loop feeds WATCHDOG=1 at most once per second. A frozen loop stops
+# feeding and systemd kills the process with SIGABRT, then restarts it. This
+# proves the process is scheduling; it does not prove the producers are
+# healthy -- use thyme_probe for that (docs/orchestration.md).
+#
+# Sockets: PrivateTmp=yes makes /tmp private to this unit, so the configured
+# [trigger_center].socket and [recorder].socket paths MUST live somewhere
+# shared, normally /run/thyme (RuntimeDirectory). A /tmp path works inside the
+# unit but is then unreachable from triggerctl and monitoring.
+#
+# Stale state: nothing here deletes /dev/shm or unlinks sockets. Producer
+# pages are owned by their creator (OPS-02 proves staleness before an unlink)
+# and trigger_center refuses to replace a foreign socket. Do not add `rm`.
+[Unit]
+Description=thyme trigger center (acquisition FSM and recorder)
+Documentation=file:/usr/share/doc/thyme/docs/orchestration.md
+After=local-fs.target thyme-app.service
+# The recorder attaches to pages created by the producer supervisor. `Wants=`
+# keeps the center startable if the producer unit is absent (a site may run
+# another producer); `PartOf=` makes a stop/restart of thyme-app stop this
+# unit too, so a new producer session never leaves the recorder mapping the
+# previous session's pages.
+Wants=thyme-app.service
+PartOf=thyme-app.service
+
+# Crash-loop guard: 5 starts per 5 minutes, then stay failed until an operator
+# intervenes. RestartSec=5s makes this far slower than the producer's own
+# role-restart backoff, so the two policies cannot resonate.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+NotifyAccess=main
+# A site file can override the watchdog gate (for example THYME_SD_NOTIFY=0)
+# and the OPS-07 resource policy (THYME_RESOURCE_CHECK=warn).
+Environment=THYME_SD_NOTIFY=1
+EnvironmentFile=-/etc/thyme/thyme-trigger-center.env
+
+# The trigger-center output directory is a deployment choice; this default
+# mirrors deploy/thyme-app.env.example. Override with a drop-in when
+# [recorder].output_dir points elsewhere. '+' runs outside the sandbox
+# (ProtectSystem=strict makes the rootfs read-only).
+ExecStartPre=+/bin/mkdir -p /opt/usr/thyme/triggered_data
+ExecStartPre=+/bin/chown thyme:thyme /opt/usr/thyme/triggered_data
+# OPS-12 config gate + OPS-07 host-capacity gate. Both are read-only and exit
+# non-zero on a rejected deployment, which aborts the start before any socket
+# is bound or capture armed.
+ExecStartPre=/opt/usr/thyme/bin/trigger_center --check-config --record-manifest /etc/thyme/record_manifest.h /etc/thyme/trigger-center.ini
+ExecStartPre=/opt/usr/thyme/bin/trigger_center --check-resources --record-manifest /etc/thyme/record_manifest.h /etc/thyme/trigger-center.ini
+
+# Default start forks the recorder child into this cgroup. KillMode=control-group
+# signals both; the child also sets PDEATHSIG so it exits if the parent dies.
+ExecStart=/opt/usr/thyme/bin/trigger_center --record-manifest /etc/thyme/record_manifest.h /etc/thyme/trigger-center.ini
+
+# A clean exit is a planned stop (SIGTERM after sealing the in-flight
+# capture); only a crash/failed start is restarted. StartLimit caps a loop.
+Restart=on-failure
+RestartSec=5s
+# Attaching sources waits for the producers; 60 s covers a slow graph start
+# without masking a missing page forever.
+TimeoutStartSec=60s
+# Shutdown seals the active continuous slice and writes the manifest.
+TimeoutStopSec=30s
+# mixed: SIGTERM only to the main process; systemd escalates to SIGKILL for
+# the cgroup after TimeoutStopSec.
+KillMode=mixed
+KillSignal=SIGTERM
+
+# A hung main loop stops feeding the watchdog and is killed with SIGABRT for
+# a post-mortem core; Restart=on-failure brings the center back.
+WatchdogSec=30s
+WatchdogSignal=SIGABRT
+
+User=thyme
+Group=thyme
+RuntimeDirectory=thyme
+RuntimeDirectoryMode=0750
+StateDirectory=thyme
+StateDirectoryMode=0750
+LogsDirectory=thyme
+LogsDirectoryMode=0750
+WorkingDirectory=/var/lib/thyme
+
+# Hardening, mirroring thyme-app.service. MemoryDenyWriteExecute is safe:
+# trigger_center does not JIT and maps only file-backed read-only pages and
+# anonymous read-write buffers.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/dev/shm /run/thyme /opt/usr/thyme/triggered_data /var/lib/thyme
+# The trigger datagram socket, the record-control datagram socket and the audit
+# log are the only endpoints; thyme opens no network sockets here.
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+
+# Resource limits mirror OPS-07's planning inputs. RLIMIT_NOFILE must cover
+# channels x files-per-channel + baseline; raise it here rather than relying
+# on the host default. IOWeight is only a scheduling hint (per-device io.max
+# is deployment-side, OPS-04).
+LimitNOFILE=65536
+TasksMax=512
+IOWeight=100
+
+[Install]
+WantedBy=thyme-acquisition.target

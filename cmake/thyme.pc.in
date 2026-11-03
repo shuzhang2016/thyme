@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: thyme
+Description: thyme real-time recording, replay and probe middleware
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lthyme_app -lthyme_recorder -lthyme_replay -lthyme_probe_core -lthyme_runtime -pthread @THYME_PC_RT@
+Cflags: -I${includedir}

@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://thyme/gen_graph/graph.schema.json",
+  "title": "thyme canonical graph (gen_graph --emit-json)",
+  "description": "Editor-facing projection of graph.yaml after gen_graph's loader has applied derived defaults. Every object rejects unknown fields (additionalProperties: false); gen_graph --from-json applies the same rule and then re-validates through the yaml loader.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "nodes"],
+  "properties": {
+    "version": { "const": 1 },
+    "pool_n": { "type": "integer", "minimum": 1 },
+    "ring_cap": { "type": "integer", "minimum": 2 },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/edge" }
+    },
+    "processes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/process" }
+    },
+    "supervisor": { "$ref": "#/definitions/supervisor" }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "hz"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "hz": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "process": { "type": "string" },
+        "cpu_set": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "sched_policy": { "enum": ["fifo", "rr", "other"] },
+        "priority": { "type": "integer" },
+        "placement_fail": { "enum": ["best_effort", "require"] },
+        "wait_inputs": { "enum": ["none", "period"] },
+        "exec": { "enum": ["cyclic", "event"] },
+        "publish": { "type": "string" },
+        "deadline_ns": { "type": "integer", "minimum": 1 },
+        "wcet_ns": { "type": "integer", "minimum": 1 },
+        "produce": { "enum": ["one", "many"], "default": "one" },
+        "input_budget": { "type": "integer", "minimum": 1 },
+        "overrun": { "enum": ["skip", "degrade", "restart"] },
+        "threads": { "type": "integer", "minimum": 1, "maximum": 64 }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "channel"],
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "channel": { "type": "string" },
+        "cpp_type": { "type": "string" },
+        "pool": { "type": "string" },
+        "transport": { "type": "string" },
+        "shm": { "type": "string" },
+        "delivery": { "enum": ["latest", "notify", "queue", "broadcast"] },
+        "read": { "enum": ["latest", "follow"] },
+        "record_priority": { "enum": ["p0", "p1", "p2"] },
+        "depth": { "type": "integer", "minimum": 2 },
+        "record": { "type": "boolean" },
+        "record_gate": { "type": "boolean" },
+        "record_kind": { "enum": ["mirror", "pinned_slot", "h264"] },
+        "bitrate_kbps": { "type": "integer", "minimum": 1 },
+        "avg_frame_bytes": { "type": "integer", "minimum": 1 },
+        "max_frame_bytes": { "type": "integer", "minimum": 1 },
+        "record_shm": { "type": "string" },
+        "dynamic": { "type": "boolean" },
+        "mp_gate": { "type": "boolean" },
+        "feedback": { "type": "boolean" },
+        "delay": { "type": "integer", "minimum": 1 },
+        "lossless": { "type": "boolean" },
+        "max_lag_ms": { "type": "integer", "minimum": 1 },
+        "before_ms": { "type": "integer", "minimum": 1 },
+        "after_ms": { "type": "integer", "minimum": 1 },
+        "per_frame_write_ms": { "type": "integer", "minimum": 1 },
+        "pin_budget": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "role": { "type": "string" }
+      }
+    },
+    "supervisor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shm_prefix": { "type": "string" },
+        "health_n": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

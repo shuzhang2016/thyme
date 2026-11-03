@@ -1,0 +1,32 @@
+# health_reporter is NOT the last node: the generated graph_check.h must fail
+# to compile (supervisor maps node index to health slot).
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: health_reporter
+    type: health_reporter
+    hz: 10
+    process: main
+  - id: prod
+    type: producer
+    hz: 10
+    process: main
+  - id: cons
+    type: consumer
+    hz: 10
+    process: main
+edges:
+  - from: prod
+    to: cons
+    channel: payload
+    cpp_type: Foo
+    pool: FooPool
+    transport: spsc
+    record_priority: p1
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

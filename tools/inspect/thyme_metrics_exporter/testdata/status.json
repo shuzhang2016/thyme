@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "session_id": "c9_4242",
+  "build": "thyme 0.1.0",
+  "uptime_ms": 184000,
+  "role_count": 2,
+  "roles": [
+    {
+      "id": "perception_0",
+      "role": "perception",
+      "state": "running",
+      "pid": 4301,
+      "restarts_attempted": 1,
+      "restarts_succeeded": 1,
+      "last_exit_code": 0,
+      "last_term_signal": 15,
+      "stall_age_ms": 12,
+      "loops": 1840,
+      "health": {
+        "alive": 18400,
+        "deadline_misses": 3,
+        "drops": 7,
+        "errors": 0,
+        "sched_mismatches": 1,
+        "error_codes": {
+          "camera": 0,
+          "lidar": 0
+        },
+        "drop_counts": {
+          "camera": 5,
+          "lidar": 2
+        }
+      }
+    },
+    {
+      "id": "recorder_0",
+      "role": "recorder",
+      "state": "gave_up",
+      "pid": 0,
+      "restarts_attempted": 5,
+      "restarts_succeeded": 0,
+      "last_exit_code": 1,
+      "last_term_signal": 0,
+      "stall_age_ms": 95000,
+      "loops": 0,
+      "health": {
+        "alive": 0,
+        "deadline_misses": 0,
+        "drops": 0,
+        "errors": 2,
+        "sched_mismatches": 0,
+        "error_codes": {
+          "record_small": 37,
+          "record_frames": 41
+        },
+        "drop_counts": {
+          "record_small": 0,
+          "record_frames": 0
+        }
+      }
+    }
+  ],
+  "recorder": {
+    "present": true,
+    "trigger_relay_sent": 120,
+    "trigger_relay_debounced": 4,
+    "trigger_req_seq": 120,
+    "trigger_ack_seq": 118
+  },
+  "logging": {
+    "budget_limit_bytes": 268435456,
+    "budget_used_bytes": 12582912,
+    "budget_drops": 3,
+    "rotations": 17
+  }
+}

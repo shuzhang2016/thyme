@@ -1,0 +1,42 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: node_a
+    type: worker
+    hz: 10
+    process: main
+  - id: node_b
+    type: worker
+    hz: 10
+    process: main
+  - id: node_c
+    type: worker
+    hz: 10
+    process: main
+edges:
+  - from: node_a
+    to: node_b
+    channel: ch_ab
+    cpp_type: Msg
+    pool: MsgPool
+    transport: spsc
+  - from: node_b
+    to: node_c
+    channel: ch_bc
+    cpp_type: Msg
+    pool: MsgPool
+    transport: spsc
+  - from: node_c
+    to: node_a
+    channel: ch_ca
+    cpp_type: Msg
+    pool: MsgPool
+    transport: spsc
+    feedback: true
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

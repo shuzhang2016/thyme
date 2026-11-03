@@ -1,0 +1,35 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: producer
+    hz: 10
+    process: p1
+  - id: cons
+    type: consumer
+    hz: 10
+    process: p1
+  - id: cons2
+    type: consumer
+    hz: 10
+    process: p1
+edges:
+  - from: prod
+    to: cons
+    channel: payload
+    cpp_type: Foo
+    pool: FooPool
+    transport: spsc
+  - from: prod
+    to: cons2
+    channel: payload
+    cpp_type: Foo
+    pool: FooPool
+    transport: spsc
+processes:
+  - id: p1
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 3

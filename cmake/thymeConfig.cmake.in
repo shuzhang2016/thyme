@@ -1,0 +1,29 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)
+
+include("${CMAKE_CURRENT_LIST_DIR}/thymeTargets.cmake")
+
+# The export uses the real target names (thyme::thyme_runtime, ...). Keep the
+# short aliases used throughout the repository and by downstream consumers.
+if(TARGET thyme::thyme_runtime AND NOT TARGET thyme::runtime)
+  add_library(thyme::runtime ALIAS thyme::thyme_runtime)
+endif()
+if(TARGET thyme::thyme_recorder AND NOT TARGET thyme::recorder)
+  add_library(thyme::recorder ALIAS thyme::thyme_recorder)
+endif()
+if(TARGET thyme::thyme_app AND NOT TARGET thyme::app)
+  add_library(thyme::app ALIAS thyme::thyme_app)
+endif()
+if(TARGET thyme::thyme_replay AND NOT TARGET thyme::replay)
+  add_library(thyme::replay ALIAS thyme::thyme_replay)
+endif()
+if(TARGET thyme::thyme_probe_core AND NOT TARGET thyme::probe)
+  add_library(thyme::probe ALIAS thyme::thyme_probe_core)
+endif()
+if(TARGET thyme::thyme_viz AND NOT TARGET thyme::viz)
+  add_library(thyme::viz ALIAS thyme::thyme_viz)
+endif()
+
+check_required_components(thyme)

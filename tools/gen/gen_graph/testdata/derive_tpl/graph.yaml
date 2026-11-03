@@ -1,0 +1,62 @@
+version: 1
+pool_n: 8
+ring_cap: 8
+nodes:
+  - id: proda
+    type: source_a
+    hz: 10
+    process: a
+  - id: prodb
+    type: source_b
+    hz: 10
+    process: a
+  - id: fusion
+    type: fusion
+    hz: 10
+    process: a
+  - id: sink
+    type: sink
+    hz: 10
+    process: b
+  - id: evt
+    type: relay
+    hz: 50
+    process: a
+    exec: event
+  - id: health_reporter
+    type: health_reporter
+    hz: 10
+    process: a
+edges:
+  - from: proda
+    to: fusion
+    channel: aa
+    cpp_type: Foo
+    pool: FooPool
+    transport: spsc
+  - from: prodb
+    to: fusion
+    channel: bb
+    cpp_type: Bar
+    pool: BarPool
+    transport: spsc
+  - from: fusion
+    to: sink
+    channel: out
+    cpp_type: Baz
+    pool: BazPool
+    transport: spsc
+    shm: _baz
+  - from: fusion
+    to: evt
+    channel: ev
+    cpp_type: Qux
+    transport: spsc
+processes:
+  - id: a
+    role: main
+  - id: b
+    role: aux
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 6

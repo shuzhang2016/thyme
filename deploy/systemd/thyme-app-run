@@ -1,0 +1,33 @@
+#!/bin/sh
+# exec entrypoint used by both init systems.
+#
+# systemd cannot expand environment variables in the ExecStart binary path, so
+# THYME_APP_BIN is resolved here instead. `exec` keeps the PID, therefore
+# systemd's NotifyAccess=main still accepts the app's READY=1 datagram.
+#
+# Environment (from /etc/thyme/thyme-app.env):
+#   THYME_APP_BIN    supervisor executable   (default /opt/usr/thyme/bin/thyme-app)
+#   THYME_LOG_FILE   optional file log       (unset under systemd: journald)
+set -eu
+
+APP_BIN=${THYME_APP_BIN:-/opt/usr/thyme/bin/thyme-app}
+
+if [ ! -x "$APP_BIN" ]; then
+  echo "thyme-app-run: THYME_APP_BIN is not executable: $APP_BIN" >&2
+  exit 69  # EX_UNAVAILABLE
+fi
+
+if [ -n "${THYME_LOG_FILE:-}" ]; then
+  case "$THYME_LOG_FILE" in
+    */*) log_dir=${THYME_LOG_FILE%/*} ;;
+    *) log_dir=. ;;
+  esac
+  mkdir -p "$log_dir" 2>/dev/null || true
+  if : >>"$THYME_LOG_FILE" 2>/dev/null; then
+    exec >>"$THYME_LOG_FILE" 2>&1
+  else
+    echo "thyme-app-run: cannot write log file $THYME_LOG_FILE; logging to stderr" >&2
+  fi
+fi
+
+exec "$APP_BIN" "$@"

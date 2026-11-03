@@ -1,0 +1,9 @@
+thyme
+Copyright (c) 2026 SoftwareMotion Co., Ltd <shu.zhang@sw-motion.cn>
+
+This product is licensed under the MIT License. See LICENSE.
+
+This product includes no bundled third-party source code other than the
+minified ECharts asset under tools/gen/gen_graph/scaffold/tools/echarts.min.js,
+which is distributed under the Apache License 2.0. Runtime and build
+dependencies are listed in docs/reference/third-party-licenses.md.

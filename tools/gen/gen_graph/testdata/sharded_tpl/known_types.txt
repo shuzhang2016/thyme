@@ -1,0 +1,4 @@
+# The producer stays a known (template-owned) type; event out-edges are
+# injected into its Ports from the graph (channel_ members), not listed here.
+producer|ProducerThread|prod|{health}|
+consumer|ConsumerThread|cons|{health}|

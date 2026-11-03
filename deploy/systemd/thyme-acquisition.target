@@ -1,0 +1,33 @@
+# OPS-11: the acquisition stack as one ordered unit group.
+#
+# `systemctl start thyme-acquisition.target` starts the producers first and
+# the recorder after them:
+#
+#   thyme-app.service             (producer supervisor: creates SHM pages)
+#        -> thyme-trigger-center.service (attaches to those pages, arms capture)
+#
+# The ordering is declared twice on purpose: this target lists the units and
+# thyme-trigger-center.service itself carries `After=thyme-app.service`, so a
+# direct `systemctl start thyme-trigger-center` is ordered too. Consumers
+# (thyme_probe, thyme-replay, thyme-bin readers) are deliberately not part of
+# the target: they are read-only and may start before, during or after the
+# acquisition stack.
+#
+# Deployments that produce the SHM pages with something other than
+# thyme-app.service (for example a site-specific graph unit) should drop in:
+#
+#   [Unit]
+#   Wants=
+#   Wants=my-producers.service
+#   After=my-producers.service
+#
+# and adjust the matching directives in the trigger-center unit. See
+# docs/orchestration.md for the full dependency and readiness contract.
+[Unit]
+Description=thyme acquisition stack (producers + trigger center)
+Documentation=file:/usr/share/doc/thyme/docs/orchestration.md
+Wants=thyme-app.service thyme-trigger-center.service
+After=thyme-app.service thyme-trigger-center.service
+
+[Install]
+WantedBy=multi-user.target

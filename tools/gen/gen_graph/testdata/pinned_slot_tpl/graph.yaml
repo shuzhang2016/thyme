@@ -1,0 +1,64 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: prod
+    type: prod
+    hz: 20
+    process: prod
+  - id: cyc
+    type: cyc
+    hz: 20
+    process: cyc
+  - id: ev
+    type: ev
+    hz: 20
+    process: ev
+    exec: event
+edges:
+  - from: prod
+    to: cyc
+    channel: tick
+    cpp_type: Tick
+    record_kind: pinned_slot
+    avg_frame_bytes: 70000
+    shm: _tick
+    delivery: broadcast
+    read: latest
+  - from: prod
+    to: cyc
+    channel: tick_follow
+    cpp_type: Tick
+    record_kind: pinned_slot
+    avg_frame_bytes: 70000
+    shm: _tick_follow
+    delivery: broadcast
+    read: follow
+  - from: prod
+    to: ev
+    channel: tick
+    cpp_type: Tick
+    record_kind: pinned_slot
+    avg_frame_bytes: 70000
+    shm: _tick
+    delivery: broadcast
+    read: follow
+  - from: prod
+    to: ev
+    channel: tick_copy
+    cpp_type: Tick
+    record_kind: pinned_slot
+    avg_frame_bytes: 70000
+    shm: _tick_copy
+    delivery: broadcast
+    read: follow
+processes:
+  - id: prod
+    role: prod
+  - id: cyc
+    role: cyc
+  - id: ev
+    role: ev
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 4

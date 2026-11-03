@@ -1,0 +1,2 @@
+# Unknown-only overlay. prod / cyc / ev are graph-injected types, not catalog
+# rows. health_reporter stays a built-in known type when injected.

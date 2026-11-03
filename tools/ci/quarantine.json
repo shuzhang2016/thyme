@@ -1,0 +1,14 @@
+{
+  "comment": "Flake quarantine registry. Each entry removes one test from the gating jobs (test-mr-gate, test-linux, nightly-ctest, nightly-asan-ubsan) while nightly-quarantine keeps running it for signal. Fields: test (ctest name), reason (why it flakes / what is being fixed), issue (ticket ref), quarantined (ISO date added), expires (ISO date, suggested +14 days). tools/ci/apply_quarantine.py hard-fails on expired or malformed entries, forcing re-review instead of silent persistence. Workflow: docs/guides/test-matrix.md#quarantine.",
+  "schema": 1,
+  "entries": [
+    {
+      "example": true,
+      "test": "test_example_flaky",
+      "reason": "TEMPLATE ONLY — ignored by apply_quarantine.py (\"example\": true). Copy this shape for real entries; never ship an entry without reason/issue/expires.",
+      "issue": "CI-07",
+      "quarantined": "2026-01-01",
+      "expires": "2026-01-15"
+    }
+  ]
+}

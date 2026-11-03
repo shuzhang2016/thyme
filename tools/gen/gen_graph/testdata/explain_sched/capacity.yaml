@@ -1,0 +1,37 @@
+version: 1
+pool_n: 4
+ring_cap: 8
+nodes:
+  - id: producer
+    type: tick
+    hz: 100
+    process: main
+    cpu_set: [0]
+    wcet_ns: 1000000
+  - id: consumer
+    type: tick
+    hz: 20
+    process: main
+    exec: event
+    cpu_set: [0]
+    wcet_ns: 10000000
+    priority: 40
+edges:
+  - from: producer
+    to: consumer
+    channel: frames
+    cpp_type: Foo
+    pool: FooPool
+    transport: spsc
+    depth: 8
+    lossless: true
+    before_ms: 10
+    after_ms: 20
+    per_frame_write_ms: 5
+    pin_budget: 2
+processes:
+  - id: main
+    role: main
+supervisor:
+  shm_prefix: "/c9_%pid"
+  health_n: 2
