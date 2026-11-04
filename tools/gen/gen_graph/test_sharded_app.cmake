@@ -359,7 +359,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "sharded cmake configure failed")
 endif()
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --parallel 1 RESULT_VARIABLE rc)
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --parallel 2 RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "sharded fixture build failed")
 endif()

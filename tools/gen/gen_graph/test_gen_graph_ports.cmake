@@ -79,7 +79,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${ROOT}/build"
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "ports app configure failed")
 endif()
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${ROOT}/build" --parallel 1
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${ROOT}/build" --parallel 2
   RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "ports app build failed")
@@ -131,7 +131,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -S "${MANY_ROOT}" -B "${MANY_ROOT}/bu
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "produce: many app configure failed")
 endif()
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${MANY_ROOT}/build" --parallel 1
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${MANY_ROOT}/build" --parallel 2
   RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "produce: many app build failed")

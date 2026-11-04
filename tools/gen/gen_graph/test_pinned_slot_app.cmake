@@ -103,7 +103,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" -S "${ROOT}" -B "${BUILD}"
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "PinnedSlot app configure failed")
 endif()
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 1
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 2
   RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "PinnedSlot app build failed")
@@ -173,7 +173,7 @@ void EvThread::OnTickCopy(const decltype(tick_copy_)::Sample& sample) {
   }
 }
 ]==])
-execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 1
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${BUILD}" --target app --parallel 2
   RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "PinnedSlot variable app build failed")

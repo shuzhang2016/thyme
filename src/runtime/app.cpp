@@ -14,10 +14,16 @@
 #include <cstring>
 #include <malloc.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 #endif
 
 namespace thyme {
 namespace {
+
+// A small RLIMIT_MEMLOCK makes mlockall(MCL_FUTURE) poison every later
+// mapping: thread stacks and SHM pages are charged to the same tiny budget
+// and fail with EAGAIN. Treat this as "memory locking unavailable" instead.
+constexpr rlim_t kMlockMinBytes = 64ULL * 1024 * 1024;
 
 std::atomic<bool> g_prepared{false};
 std::atomic<bool> g_memory_locked{false};
@@ -59,14 +65,31 @@ bool App::Prepare() {
     THYME_LOG_WARN("thyme: THYME_NO_MLOCK set — skipping mlockall "
                    "(RT threads may page-fault)");
   }
-  const bool locked =
-      !mlock_disabled && mlockall(MCL_CURRENT | MCL_FUTURE) == 0;
+  struct rlimit mlock_limit {};
+  const bool have_mlock_limit = getrlimit(RLIMIT_MEMLOCK, &mlock_limit) == 0;
+  const bool mlock_limit_too_small =
+      have_mlock_limit && mlock_limit.rlim_cur != RLIM_INFINITY &&
+      mlock_limit.rlim_cur < kMlockMinBytes;
+  const bool locked = !mlock_disabled && !mlock_limit_too_small &&
+                      mlockall(MCL_CURRENT | MCL_FUTURE) == 0;
   if (!locked && !mlock_disabled) {
     flags |= kMemoryMlockFailed;
-    THYME_LOG_ERROR("thyme: mlockall(MCL_CURRENT|MCL_FUTURE) failed: %s "
-                    "(need CAP_IPC_LOCK or RLIMIT_MEMLOCK); RT threads may "
-                    "page-fault",
-                    std::strerror(errno));
+    if (mlock_limit_too_small) {
+      THYME_LOG_WARN("thyme: memory locking disabled: RLIMIT_MEMLOCK=%llu "
+                     "bytes is below the %llu-byte minimum; RT threads may "
+                     "page-fault",
+                     static_cast<unsigned long long>(mlock_limit.rlim_cur),
+                     static_cast<unsigned long long>(kMlockMinBytes));
+    } else {
+      THYME_LOG_ERROR("thyme: mlockall(MCL_CURRENT|MCL_FUTURE) failed: %s "
+                      "(need CAP_IPC_LOCK or RLIMIT_MEMLOCK); RT threads may "
+                      "page-fault",
+                      std::strerror(errno));
+    }
+    // A failed/partial mlockall can leave MCL_FUTURE set. Future mappings
+    // (thread stacks, SHM pages) would then be forced into the locked-memory
+    // budget and fail with EAGAIN under a small RLIMIT_MEMLOCK. Clear it.
+    munlockall();
   }
   bool tuned = mallopt(M_ARENA_MAX, 1) != 0;
 #ifdef M_TRIM_THRESHOLD

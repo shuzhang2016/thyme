@@ -39,22 +39,9 @@ jobs:
         run: ctest --test-dir build -L mr_gate --output-on-failure
 
   test-linux:
-    name: Full Linux test suite (shard ${{ matrix.shard }})
+    name: Full Linux test suite
     if: github.event_name == 'push'
     runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-      issues: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - shard: 1
-            range: "1,90"
-          - shard: 2
-            range: "91,180"
-          - shard: 3
-            range: "181,270"
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
@@ -70,115 +57,7 @@ jobs:
         run: |
           ulimit -u 65535 2>/dev/null || true
           ulimit -l unlimited 2>/dev/null || true
-          set -o pipefail
-          ctest --test-dir build --output-on-failure -I "${{ matrix.range }}" \
-            -E '^bench_|^test_shm_leak_audit$' 2>&1 | tee /tmp/ctest.out
-      - name: Annotate CTest failures
-        if: failure()
-        run: |
-          if [ -f build/Testing/Temporary/LastTestsFailed.log ]; then
-            failed="$(tr '\n' ';' < build/Testing/Temporary/LastTestsFailed.log)"
-            echo "::error title=CTest failures::${failed}"
-          else
-            echo "::error title=CTest failures::LastTestsFailed.log was not produced"
-          fi
-      - name: Annotate CTest failure excerpts
-        if: failure()
-        run: |
-          python3 - <<'PY'
-          import pathlib
-          path = pathlib.Path("/tmp/ctest.out")
-          if not path.is_file():
-              print("::error title=CTest excerpt::ctest output was not captured")
-              raise SystemExit(0)
-          lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-          out = []
-          for index, line in enumerate(lines):
-              if "Test Failed" in line or "***Failed" in line:
-                  out.extend(lines[max(0, index - 3):index + 45])
-          excerpt = "\n".join(out)[-12000:]
-          excerpt = excerpt.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-          print(f"::error title=CTest excerpt::{excerpt}")
-          PY
-      - name: File CI diagnostic issue
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo "Diagnostic for ${GITHUB_SHA}"
-            echo
-            echo '```'
-            cat build/Testing/Temporary/LastTestsFailed.log 2>/dev/null || true
-            echo '```'
-            echo
-            grep -n -A60 -E 'Test Failed|\*\*\*Failed' \
-              /tmp/ctest.out 2>/dev/null | tail -2000 || true
-            echo
-            echo '### Resource state at failure'
-            echo '```'
-            ulimit -a
-            echo "pids.max: $(cat /sys/fs/cgroup/pids.max 2>/dev/null || echo n/a)"
-            echo "pids.current: $(cat /sys/fs/cgroup/pids.current 2>/dev/null || echo n/a)"
-            echo "cgroup: $(cat /proc/self/cgroup)"
-            for f in /sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.max \
-                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.current \
-                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/memory.events \
-                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/pids.max \
-                     /sys/fs/cgroup/system.slice/hosted-compute-agent.service/pids.current; do
-              echo "$(basename "$f"): $(cat "$f" 2>/dev/null || echo n/a)"
-            done
-            echo "threads/processes: $(ps -eLf 2>/dev/null | wc -l)"
-            echo "zombies: $(ps -eo stat 2>/dev/null | grep -c '^Z')"
-            find /sys/fs/cgroup -maxdepth 4 -name pids.max -print -exec cat {} \; 2>/dev/null | head -20
-            free -m
-            df -h
-            echo '```'
-          } > /tmp/ci-diagnostic.md
-          gh issue create --title "CI diagnostic ${{ matrix.shard }} ${GITHUB_SHA::7}" \
-            --body-file /tmp/ci-diagnostic.md
-      - name: Summarize CTest failures
-        if: failure()
-        run: |
-          {
-            echo "## CTest failures"
-            echo
-            if [ -f build/Testing/Temporary/LastTestsFailed.log ]; then
-              echo '```'
-              cat build/Testing/Temporary/LastTestsFailed.log
-              echo '```'
-            else
-              echo "No LastTestsFailed.log was produced."
-            fi
-            if [ -f build/Testing/Temporary/LastTest.log ]; then
-              echo
-              echo "### Failure excerpts"
-              echo '```'
-              grep -n -A25 -E 'Test Failed|FAILED|Failed' \
-                build/Testing/Temporary/LastTest.log | tail -400
-              echo '```'
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  test-shm-leak-audit:
-    name: SHM leak audit
-    if: github.event_name == 'push'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake python3 python3-yaml ccache
-      - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-      - name: Build
-        run: cmake --build build -j"$(nproc)"
-      - name: Run the SHM leak audit in a fresh job
-        run: |
-          ulimit -u 65535 2>/dev/null || true
-          ctest --test-dir build --output-on-failure -R '^test_shm_leak_audit$'
+          ctest --test-dir build --output-on-failure
 
   check-clang-tidy:
     name: clang-tidy
