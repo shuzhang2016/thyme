@@ -534,8 +534,11 @@ and must never be treated as lock failure.
 - `memlock` warn: grant `CAP_IPC_LOCK`, raise `LimitMEMLOCK`, or set
   `THYME_NO_MLOCK=1` and accept page-fault jitter. Only
   `1/true/yes/on` disables it; `0`, empty, and other values still run the
-  default `mlockall(MCL_CURRENT|MCL_FUTURE)`. Disabling lowers residency but RT
-  threads may fault;
+  default `mlockall(MCL_CURRENT|MCL_FUTURE)`. If `RLIMIT_MEMLOCK` is below
+  64 MiB, `App::Prepare()` skips `mlockall` and reports
+  `kMemoryMlockFailed`, because a successful `MCL_FUTURE` lock with that
+  budget makes later thread stacks and SHM mappings fail with `EAGAIN`.
+  Disabling lowers residency but RT threads may fault;
 - `shm` fatal/warn: reclaim stale segments first, then consider enlarging
   `/dev/shm`;
 - `disk` fatal: free space; `high_reserved_mb` is the crash-package reserve, so
